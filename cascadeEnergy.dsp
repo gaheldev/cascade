@@ -8,53 +8,98 @@ import("stdfaust.lib");
 
 // E(i,t) = E(i,t-1) + dt * (-nuk(i)*E(i,t-1) + T(E(i-1,t-1), E(i,t-1) - T(i, i+1) + noise)
 
-source = 1;
+source = hslider("E0",1,0,100,0.01);
+sink = hslider("En",1,0,100,0.01);
+
+threshold = 0.0001; // minimum energy levels
+N = 5;
+
 
 dt = ba.samp2sec(1);
+// dt = 1;
 
-nu = hslider("nu",0.1,0,100,0.01);
-d(i) = nu*(0.5)^(i);
+nu = 10^hslider("nu",1,-10,10,0.01);
+// nu = 0;
+k0 = 10^hslider("k0", 1, -10, 10, 0.01);
+lambda = hslider("lambda", 2, 1.01, 10, 0.01);
 
-N = 3;
+a = hslider("alpha", 0.1, threshold, 1/2 - threshold, 0.01); // alpha in the paper
+b = hslider("beta", 0.9, 1/2 + threshold, 10, 0.01); // beta in the paper
 
-dissipation = case {
-    (0) => _;
-    (3) => *(0);
-    (i) => *(1-dt*d(i));
-};
 
-noise_generator(i) = no.noise;
+k(i) = k0 * (lambda)^(i+1); // index starts from 0, paper starts from 1
 
-add_noise = case {
-    (0) => +(0);
-    (3) => +(0);
-    (i) => _ + dt * noise_generator(i);
-};
 
-a = 0.5;
-T(i) = _, _ : _^(3/2+a), _^(-a) : _ + _; // T(Ei-1, Ei) TODO: substract transfer from i+1 to i
-
-add_transfer = case {
-    (0) => +(0);
-    (3) => +(0);
-    (i) => _, _ : dt * T(i);
-};
 
 
 idle = par(i,N,_);
-memoryline = par(i,N,_');
-dissipate = par(i,N,dissipation(i)); // : par(i,N,add_noise(i));
-transfer_from_lower = par(i,N,add_transfer(i));
-transfer_to_higher = par(i,N, (add_transfer(i+1)*(-1)));
-noise = par(i,N,add_noise(i));
-remove_idle = route(6,3,4,1,5,2,6,3);
+
+
+
+
+d(i) = nu*(k(i))^(2);
+
+dissipation = case {
+    (0) => _*0;
+    (i) => *(-dt*d(i));
+};
+
+dissipate = idle : par(i,N,dissipation(i));
+
+
+
+f(e1,e2) = 1 / ((e2/e1)^a + (e2/e1)^b);
+
+
+
+T(i, e1,e2) = f(e1,e2) *( k(i) * (max(e2,threshold))^(3/2) );
+
+add_transfer(i, e1, e2) =   dt * T(i, e1, e2);
+sub_transfer(i, e1, e2) = - dt * T(i, e1, e2);
+
+select_and_next(i) = ba.selector(i,N), ba.selector(i+1,N);
+
+transfer_from_lower = idle
+                      <: ba.selector(0,N) * 0, // E(0) is unchanged                        
+                         par(i, N-2, select_and_next(i) : add_transfer(i+1) ), // transfer 0->1, 1->2, ..., n-2->n-1  
+                         ba.selector(N-1,N) * 0; // E(N) is unchanged
+                         //  select i-1 and i and apply T(i) 
+                         // /!\ we're counting from 0 to N-2 for E(1) to E(N)
+
+
+transfer_to_higher = idle
+                     <: ba.selector(0,N) * 0, // E(0) is unchanged  
+                        par(i, N-2, select_and_next(i+1) : sub_transfer(i+2) ), // transfer 2->1, ..., n-1->n-2
+                        ba.selector(N-1,N) * 0; // E(N) is unchanged
+                        //  select i and i+1 and apply T(i+1) 
+                        // /!\ we're counting from 0 to N-2 for E(0) to E(N-1)
+
+
+
+
+noise_generator(i) = no.noise * (10 ^ hslider("noise",1,-10,10,0.01));
+
+add_noise = case {
+    (0) => _ + 0;
+    (i) => _ + dt * noise_generator(i);
+};
+
+noise = idle : par(i,N,add_noise(i));
+
+
+
+
+constrain_to_positive = idle : par(i, N, max(threshold, _)); // Energie levels have to be > 0
+
+
+
 
 E = idle 
-    <: idle , dissipate 
-    : route(6,8, 1,1,2,2,3,3, 4,4, 4,5,5,6, 5,7,6,8)
-    : idle, transfer_from_lower
-    : route(6,8, 1,1,2,2,3,3, 4,4,5,5, 5,6,6,7, 6,8) 
-    : idle, transfer_to_higher 
-    : remove_idle;
+    : constrain_to_positive
+    <: idle, dissipate, transfer_from_lower, transfer_to_higher//, noise
+    :> idle;
 
-process = E ~ (source, _, _);
+energy = E ~ ( _*0 + source, par(i, N-2, _), _*0 + sink );
+
+
+process = energy;
