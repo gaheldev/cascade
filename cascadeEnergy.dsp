@@ -76,12 +76,13 @@ transfer_to_higher = idle
 
 
 
-
-noise_generator(i) = no.noise * (10 ^ hslider("noise",1,-10,10,0.01));
+eta = hslider("noise", 1, 0, 100, 0.01);
+g(i) = eta * k(i)^(5/4) * _^(1/2);
+noise_generator(i) = no.gnoise(10) * g(i);
 
 add_noise = case {
     (0) => _ + 0;
-    (i) => _ + dt * noise_generator(i);
+    (i) =>_ <: _, dt * noise_generator(i) :> _;
 };
 
 noise = idle : par(i,N,add_noise(i));
