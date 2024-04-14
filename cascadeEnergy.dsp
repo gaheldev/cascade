@@ -131,7 +131,9 @@ E = idle
     <: idle, dissipate, transfer_from_lower, transfer_to_higher//, noise
     :> reset_source_sink;
 
-energy = E ~ ( _*0 + source, par(i, N-2, _), _*0 + sink );
+energy = E ~ idle; // feed back the energy output to itself
 
 
-process = energy;
+strip_source_sink = idle <: par(i, N-2, ba.selector(i+1,N)); // remove source and sink from output
+
+process = energy : strip_source_sink;
