@@ -8,10 +8,12 @@ import("stdfaust.lib");
 
 // E(i,t) = E(i,t-1) + dt * (-nuk(i)*E(i,t-1) + T(E(i-1,t-1), E(i,t-1) - T(i, i+1) + noise)
 
+
+/* =========== Settings ==============*/
+
 source = hslider("E0",1,0,100,0.01);
 sink = hslider("En",1,0,100,0.01);
 
-threshold = 0.0001; // minimum energy levels
 N = 5;
 
 
@@ -23,8 +25,8 @@ nu = 10^hslider("nu",1,-10,10,0.01);
 k0 = 10^hslider("k0", 1, -10, 10, 0.01);
 lambda = hslider("lambda", 2, 1.01, 10, 0.01);
 
-a = hslider("alpha", 0.1, threshold, 1/2 - threshold, 0.01); // alpha in the paper
-b = hslider("beta", 0.9, 1/2 + threshold, 10, 0.01); // beta in the paper
+a = hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01); // alpha in the paper
+b = hslider("beta", 0.9, 1/2 + ma.EPSILON, 10, 0.01); // beta in the paper
 
 
 k(i) = k0 * (lambda)^(i+1); // index starts from 0, paper starts from 1
@@ -36,6 +38,7 @@ idle = par(i,N,_);
 
 
 
+/* =========== Dissipation ==============*/
 
 d(i) = nu*(k(i))^(2);
 
@@ -48,11 +51,18 @@ dissipate = idle : par(i,N,dissipation(i));
 
 
 
-f(e1,e2) = 1 / ((e2/e1)^a + (e2/e1)^b);
+/* =========== Transfers ==============*/
+
+// Make divisions safe again
+max_clip(x) = max(ma.INFINITY * -1, min(ma.INFINITY, x)); // clip value between -INF and INF
+safe_div(x, y) = max_clip(ba.if(y < 0, x / min(ma.EPSILON * -1, y), x / max(ma.EPSILON, y))); // divide at most by ±EPSILON, 0/anything = 0
+
+
+f(e1,e2) = safe_div(1, safe_div(e2,e1)^a + safe_div(e2,e1)^b );
 
 
 
-T(i, e1,e2) = f(e1,e2) *( k(i) * (max(e2,threshold))^(3/2) );
+T(i, e1,e2) = f(e1,e2) *( k(i) * (max(e2,ma.EPSILON))^(3/2) );
 
 add_transfer(i, e1, e2) =   dt * T(i, e1, e2);
 sub_transfer(i, e1, e2) = - dt * T(i, e1, e2);
@@ -76,6 +86,8 @@ transfer_to_higher = idle
 
 
 
+/* =========== Noise ==============*/
+
 eta = hslider("noise", 1, 0, 100, 0.01);
 g(i) = eta * k(i)^(5/4) * _^(1/2);
 noise_generator(i) = no.gnoise(10) * g(i);
@@ -89,16 +101,35 @@ noise = idle : par(i,N,add_noise(i));
 
 
 
+/* =========== Energy constraints ==============*/
 
-constrain_to_positive = idle : par(i, N, max(threshold, _)); // Energie levels have to be > 0
+constrain_to_positive = idle : par(i, N, max(ma.EPSILON, _)); // Energie levels have to be > 0
+reset_source_sink = idle 
+                    <: ba.selector(0,N) * 0 + source, // E(0) is unchanged                        
+                       par(i, N-2, ba.selector(i+1,N)), 
+                       ba.selector(N-1,N) * 0 + sink; // E(N) is unchanged
+
+
+/* =========== DEBUG tools ==============*/
+
+// allow to test valid values of energy levels
+min_value = 0.000000001;
+E1 = hslider("E1",1,0,100,min_value);
+E2 = hslider("E2",1,0,100,min_value);
+E3 = hslider("E3",1,0,100,min_value);
+
+test_values = idle <: par(i,N, _*0) , source, E1, E2, E3, sink :> idle;
 
 
 
+/* =========== Energy computation ==============*/
 
-E = idle 
+E = idle
     : constrain_to_positive
+    // <: idle, transfer_to_higher//, noise
+    // : test_values <: par(i,N-1, select_and_next(i) : f), 0; // test f values
     <: idle, dissipate, transfer_from_lower, transfer_to_higher//, noise
-    :> idle;
+    :> reset_source_sink;
 
 energy = E ~ ( _*0 + source, par(i, N-2, _), _*0 + sink );
 
