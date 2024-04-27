@@ -1,0 +1,2 @@
+env = Environment(CPPPATH=['.','../fmodstudioapi20221linux/api/core/inc/'])
+env.SharedLibrary(target='gahel_chords', source='plugin.cpp')
