@@ -118,7 +118,7 @@ constrain_output_to_positive = idle
 /* =========== Exciter ==============*/
 
 excite = button("Excite");
-// excite = os.imptrain(1/hslider("excite time (s)", 5, 1, 15, 0.1)); // DEBUG
+// excite = os.lf_imptrain(1/hslider("excite time (s)", 5, 1, 15, 0.1)); // DEBUG
 
 exciter = idle
           <: ba.selector(0,N), // source
