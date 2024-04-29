@@ -20,9 +20,9 @@ N = 5;
 dt = ba.samp2sec(1);
 // dt = 1;
 
-nu = hslider("nu",1,0,2,0.01);
+nu = hslider("nu",1,0,1,0.01);
 k0 = hslider("k0", 1, 0, 10, 0.01);
-lambda = hslider("lambda", 2, 1.01, 10, 0.01);
+lambda = hslider("lambda", 1.5, 1 + ma.EPSILON, 3, 0.01);
 
 alpha = hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01);
 beta = hslider("beta", 0.9, 1/2 + ma.EPSILON, 10, 0.01); 
@@ -89,16 +89,16 @@ transfer_to_higher = idle
 
 /* =========== Noise ==============*/
 
-ksi = hslider("noise", 1, 0, 10, 0.01);
+ksi = hslider("noise", 1, 0, 2, 0.01);
 g(i) = ksi * k(i)^(5/4) * _^(1/2);
 noise_generator(i) = no.gnoise(10) * g(i);
 
 add_noise = case {
-    (0) => _ + 0;
-    (i) => _ <: _, dt * noise_generator(i) :> _;
+    (0) => _*0;
+    (i) => sqrt(dt) * noise_generator(i);
 };
 
-noise = idle : par(i,N,add_noise(i));
+noise = par(i,N,add_noise(i));
 
 
 
@@ -131,7 +131,7 @@ exciter = idle
 E = idle
     : constrain_to_positive
     : exciter
-    <: idle, dissipate, transfer_from_lower, transfer_to_higher//, noise
+    <: idle, dissipate, transfer_from_lower, transfer_to_higher, noise
     :> idle
     : constrain_output_to_positive
     : reset_source_sink;
@@ -142,5 +142,4 @@ energy = E ~ idle; // feed back the energy output to itself
 strip_source_sink = idle <: par(i, N-2, ba.selector(i+1,N)); // remove source and sink from output
 
 process = energy : strip_source_sink;
-
 
