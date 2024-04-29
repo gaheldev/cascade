@@ -11,8 +11,8 @@ import("stdfaust.lib");
 
 /* =========== Settings ==============*/
 
-source = hslider("E0",1,0,100,0.01);
-sink = hslider("En",1,0,100,0.01);
+source = hslider("E0",1,0,1,0.01);
+sink = hslider("E%N",0.1,0,1,0.01);
 
 N = 5;
 
@@ -20,9 +20,8 @@ N = 5;
 dt = ba.samp2sec(1);
 // dt = 1;
 
-nu = 10^hslider("nu (log)",1,-10,10,0.01);
-// nu = 0;
-k0 = 10^hslider("k0 (log)", 1, -10, 10, 0.01);
+nu = hslider("nu",1,0,2,0.01);
+k0 = hslider("k0", 1, 0, 10, 0.01);
 lambda = hslider("lambda", 2, 1.01, 10, 0.01);
 
 alpha = hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01);
@@ -115,24 +114,23 @@ constrain_output_to_positive = idle
                                <: idle, constrain_to_positive
                                <: par(i, N, ba.if(checkbox("contrain output to positive values"), ba.selector(i+N, 2*N), ba.selector(i, 2*N)));
 
-/* =========== DEBUG tools ==============*/
 
-// allow to test valid values of energy levels
-min_value = 0.000000001;
-E1 = hslider("E1",1,0,100,min_value);
-E2 = hslider("E2",1,0,100,min_value);
-E3 = hslider("E3",1,0,100,min_value);
+/* =========== Exciter ==============*/
 
-test_values = idle <: par(i,N, _*0) , source, E1, E2, E3, sink :> idle;
+excite = button("Excite");
+// excite = os.imptrain(1/hslider("excite time (s)", 5, 1, 15, 0.1)); // DEBUG
 
+exciter = idle
+          <: ba.selector(0,N), // source
+             par(i, N-2, (ba.selector(i+1,N), hslider("E %{i}", 0.1, 0, 1, 0.01) : _ * (1-excite), _ * excite :> _) ),
+             ba.selector(N-1,N); // sink
 
 
 /* =========== Energy computation ==============*/
 
 E = idle
     : constrain_to_positive
-    // <: idle, transfer_to_higher//, noise
-    // : test_values <: par(i,N-1, select_and_next(i) : f), 0; // test f values
+    : exciter
     <: idle, dissipate, transfer_from_lower, transfer_to_higher//, noise
     :> idle
     : constrain_output_to_positive
@@ -144,4 +142,5 @@ energy = E ~ idle; // feed back the energy output to itself
 strip_source_sink = idle <: par(i, N-2, ba.selector(i+1,N)); // remove source and sink from output
 
 process = energy : strip_source_sink;
+
 
