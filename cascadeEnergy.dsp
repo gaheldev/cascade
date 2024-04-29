@@ -20,14 +20,16 @@ N = 5;
 dt = ba.samp2sec(1);
 // dt = 1;
 
-nu = 10^hslider("nu",1,-10,10,0.01);
+nu = 10^hslider("nu (log)",1,-10,10,0.01);
 // nu = 0;
-k0 = 10^hslider("k0", 1, -10, 10, 0.01);
+k0 = 10^hslider("k0 (log)", 1, -10, 10, 0.01);
 lambda = hslider("lambda", 2, 1.01, 10, 0.01);
 
-a = hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01); // alpha in the paper
-b = hslider("beta", 0.9, 1/2 + ma.EPSILON, 10, 0.01); // beta in the paper
+alpha = hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01);
+beta = hslider("beta", 0.9, 1/2 + ma.EPSILON, 10, 0.01); 
 
+a = hslider("a", 1, 0, 10, 0.01); 
+b = hslider("b", 1, ma.EPSILON, 10, 0.01); 
 
 k(i) = k0 * (lambda)^(i+1); // index starts from 0, paper starts from 1
 
@@ -44,7 +46,7 @@ d(i) = nu*(k(i))^(2);
 
 dissipation = case {
     (0) => _*0;
-    (i) => *(-dt*d(i));
+    (i) => _*(-dt*d(i));
 };
 
 dissipate = idle : par(i,N,dissipation(i));
@@ -58,7 +60,7 @@ max_clip(x) = max(ma.INFINITY * -1, min(ma.INFINITY, x)); // clip value between 
 safe_div(x, y) = max_clip(ba.if(y < 0, x / min(ma.EPSILON * -1, y), x / max(ma.EPSILON, y))); // divide at most by ±EPSILON, 0/anything = 0
 
 
-f(e1,e2) = safe_div(1, safe_div(e2,e1)^a + safe_div(e2,e1)^b );
+f(e1,e2) = safe_div(a, safe_div(e2,e1)^alpha * (1 + safe_div(a,b) * safe_div(e2,e1)^(beta-alpha)) );
 
 
 
@@ -88,13 +90,13 @@ transfer_to_higher = idle
 
 /* =========== Noise ==============*/
 
-eta = hslider("noise", 1, 0, 100, 0.01);
-g(i) = eta * k(i)^(5/4) * _^(1/2);
+ksi = hslider("noise", 1, 0, 10, 0.01);
+g(i) = ksi * k(i)^(5/4) * _^(1/2);
 noise_generator(i) = no.gnoise(10) * g(i);
 
 add_noise = case {
     (0) => _ + 0;
-    (i) =>_ <: _, dt * noise_generator(i) :> _;
+    (i) => _ <: _, dt * noise_generator(i) :> _;
 };
 
 noise = idle : par(i,N,add_noise(i));
@@ -109,6 +111,9 @@ reset_source_sink = idle
                        par(i, N-2, ba.selector(i+1,N)), 
                        ba.selector(N-1,N) * 0 + sink; // E(N) is unchanged
 
+constrain_output_to_positive = idle 
+                               <: idle, constrain_to_positive
+                               <: par(i, N, ba.if(checkbox("contrain output to positive values"), ba.selector(i+N, 2*N), ba.selector(i, 2*N)));
 
 /* =========== DEBUG tools ==============*/
 
@@ -129,7 +134,9 @@ E = idle
     // <: idle, transfer_to_higher//, noise
     // : test_values <: par(i,N-1, select_and_next(i) : f), 0; // test f values
     <: idle, dissipate, transfer_from_lower, transfer_to_higher//, noise
-    :> reset_source_sink;
+    :> idle
+    : constrain_output_to_positive
+    : reset_source_sink;
 
 energy = E ~ idle; // feed back the energy output to itself
 
@@ -137,3 +144,4 @@ energy = E ~ idle; // feed back the energy output to itself
 strip_source_sink = idle <: par(i, N-2, ba.selector(i+1,N)); // remove source and sink from output
 
 process = energy : strip_source_sink;
+
