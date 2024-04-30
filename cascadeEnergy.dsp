@@ -1,4 +1,4 @@
-declare name 	"cascadeEnergy";
+declare name 	"CascadeEnergy";
 declare author 	"gahel";
 declare copyright "Gahel";
 declare version "1.0";
@@ -111,11 +111,12 @@ noise = par(i,N,add_noise(i));
 
 /* =========== Energy constraints ==============*/
 
-constrain_to_positive = idle : par(i, N, max(ma.EPSILON, _)); // Energie levels have to be > 0
-reset_source_sink = idle 
-                    <: ba.selector(0,N) * 0 + source, // E(0) is unchanged                        
-                       par(i, N-2, ba.selector(i+1,N)), 
-                       ba.selector(N-1,N) * 0 + sink; // E(N) is unchanged
+positivize(x) = max(ma.EPSILON, x);
+constrain_to_positive = idle : par(i, N, positivize(_)); // Energie levels have to be > 0
+reset_source_sink(source, sink) = idle 
+                                    <: ba.selector(0,N) * 0 + source, // E(0) is unchanged                        
+                                    par(i, N-2, ba.selector(i+1,N)), 
+                                    ba.selector(N-1,N) * 0 + sink; // E(N) is unchanged
 
 constrain_output_to_positive = idle 
                                <: idle, constrain_to_positive
@@ -124,30 +125,31 @@ constrain_output_to_positive = idle
 
 /* =========== Exciter ==============*/
 
-excite = button("Excite");
-// excite = os.lf_imptrain(1/hslider("excite time (s)", 5, 1, 15, 0.1)); // DEBUG
-
-exciter = idle
-          <: ba.selector(0,N), // source
-             par(i, N-2, (ba.selector(i+1,N), hslider("E%{i}", 0.1, 0, 1, 0.01) : _ * (1-excite), _ * excite :> _) ),
-             ba.selector(N-1,N); // sink
+exciter(excite) = idle
+                    <: ba.selector(0,N), // source
+                        par(i, N-2, (ba.selector(i+1,N), hslider("E%{i}", 0.1, 0, 1, 0.01) : _ * (1-excite), _ * excite :> _) ),
+                        ba.selector(N-1,N); // sink
 
 
 /* =========== Energy computation ==============*/
 
-E = idle
-    : constrain_to_positive
-    : exciter
-    <: idle, dissipate, transfer_from_lower, transfer_to_higher, noise
-    :> idle
-    : constrain_output_to_positive
-    : reset_source_sink;
+E(excite, source, sink) = idle
+                            : constrain_to_positive
+                            : exciter(excite)
+                            <: idle, dissipate, transfer_from_lower, transfer_to_higher, noise
+                            :> idle
+                            : constrain_output_to_positive
+                            : reset_source_sink(source, sink);
 
-energy = E ~ idle; // feed back the energy output to itself
+energy(excite, source, sink) = E(excite, source, sink) ~ idle; // feed back the energy output to itself
 
 
 strip_source_sink = idle <: par(i, N-2, ba.selector(i+1,N)); // remove source and sink from output
 
-process = energy : strip_source_sink;
+
+safe_input(excite, source, sink) = ba.if(excite==0, 0, 1), positivize(source), positivize(sink);
+
+// input: exciter (bool), source, sink
+process = _, _, _ : safe_input : energy : strip_source_sink;
 
 
