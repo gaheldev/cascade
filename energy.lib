@@ -21,15 +21,16 @@ cascade_env = environment{
     dt = ba.samp2sec(1);
     // dt = 1;
 
-    nu = hslider("nu",1,0,1,0.01);
-    k0 = hslider("k0", 1, 0, 10, 0.01);
-    lambda = hslider("lambda", 1.5, 1 + ma.EPSILON, 3, 0.01);
+    parameters(x) = vgroup("Parameters",x);
+    nu = parameters(hslider("nu",1,0,1,0.01));
+    k0 = parameters(hslider("k0", 1, 0, 10, 0.01));
+    lambda = parameters(hslider("lambda", 1.5, 1 + ma.EPSILON, 3, 0.01));
 
-    alpha = hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01);
-    beta = hslider("beta", 0.9, 1/2 + ma.EPSILON, 10, 0.01); 
+    alpha = parameters(hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01));
+    beta = parameters(hslider("beta", 0.9, 1/2 + ma.EPSILON, 10, 0.01)); 
 
-    a = hslider("a", 1, 0, 10, 0.01); 
-    b = hslider("b", 1, ma.EPSILON, 10, 0.01); 
+    a = parameters(hslider("a", 1, 0, 10, 0.01)); 
+    b = parameters(hslider("b", 1, ma.EPSILON, 10, 0.01)); 
 
     k(i) = k0 * (lambda)^(i+1); // index starts from 0, paper starts from 1
 
@@ -90,7 +91,7 @@ cascade_env = environment{
 
     /* =========== Noise ==============*/
 
-    eta = hslider("noise", 1, 0, 2, 0.001);
+    eta = parameters(hslider("noise", 1, 0, 2, 0.001));
     g(i) = eta * k(i)^(1/2) * _^(5/4);
 
     noise_generator(i) = no.gnoise(10) * g(i);
@@ -122,16 +123,18 @@ cascade_env = environment{
 
     constrain_output_to_positive(N) = idle(N) 
                                       <: idle(N), constrain_to_positive(N)
-                                      <: par(i, N, ba.if(checkbox("contrain output to positive values"),
+                                      <: par(i, N, ba.if(parameters(checkbox("contrain output to positive values")),
                                                          ba.selector(i+N, 2*N),
                                                          ba.selector(i, 2*N)));
 
 
     /* =========== Exciter ==============*/
 
+    modes(x) = hgroup("Modes",x);
+
     exciter(N,excite) = idle(N)
                         <: ba.selector(0,N), // source
-                           par(i, N-2, (ba.selector(i+1,N), hslider("E%{i}", 0.1, 0, 1, 0.01) : _ * (1-excite), _ * excite :> _) ),
+                           par(i, N-2, (ba.selector(i+1,N), modes(vslider("E%{i}", 0.1, 0, 1, 0.01)) : _ * (1-excite), _ * excite :> _) ),
                            ba.selector(N-1,N); // sink
 
 
@@ -147,7 +150,7 @@ cascade_env = environment{
 
 
 
-    compute_energy(N, excite, source, sink) = E(N, excite, source, sink) ~ idle(N); // feed back the energy output to itself
+    compute_energy(N, excite, source, sink) = hgroup("Energy", E(N, excite, source, sink) ~ idle(N)); // feed back the energy output to itself
 
     safe_input(excite, source, sink) = ba.if(excite==0, 0, 1), strict_positivize(source), strict_positivize(sink);
 
@@ -163,4 +166,5 @@ strip_source_sink(N) = cascade_env.idle(N) <: par(i, N-2, ba.selector(i+1,N));
 energy(N, exciter, source, sink) = cascade_env.safe_input(exciter, source, sink) 
                                    : cascade_env.compute_energy(N)
                                    : strip_source_sink(N);
+
 
