@@ -1,4 +1,4 @@
-declare name 	"CascadeEnergy";
+declare name 	"Energy";
 declare author 	"gahel";
 declare copyright "Gahel";
 declare version "1.0";
@@ -89,15 +89,16 @@ transfer_to_higher = idle
 
 /* =========== Noise ==============*/
 
-ksi = hslider("noise", 1, 0, 2, 0.001);
-g(i) = ksi * k(i)^(5/4) * _^(1/2);
+eta = hslider("noise", 1, 0, 2, 0.001);
+g(i) = eta * k(i)^(1/2) * _^(5/4);
 
-noise_speed = hslider("Noise speed", 1, 0, 10, 0.1);
-sin_noise(x) = (sin(x*noise_speed) + sin(ma.PI/2*x*noise_speed) + sin(sqrt(2)*x*noise_speed)) / 20 ; // smooth pseudo random noise
-smooth_noise = sin_noise(ba.samp2sec(ba.time));
+noise_generator(i) = no.gnoise(10) * g(i);
 
-// noise_generator(i) = no.gnoise(10) * g(i);
-noise_generator(i) = smooth_noise * g(i);
+// noise_speed = hslider("Noise speed", 1, 0, 10, 0.1);
+// sin_noise(x) = (sin(x*noise_speed) + sin(ma.PI/2*x*noise_speed) + sin(sqrt(2)*x*noise_speed)) / 20 ; // smooth pseudo random noise
+// smooth_noise = sin_noise(ba.samp2sec(ba.time));
+
+// noise_generator(i) = smooth_noise * g(i);
 
 
 add_noise = case {
@@ -111,8 +112,8 @@ noise = par(i,N,add_noise(i));
 
 /* =========== Energy constraints ==============*/
 
-positivize(x) = max(ma.EPSILON, x);
-constrain_to_positive = idle : par(i, N, positivize(_)); // Energie levels have to be > 0
+strict_positivize(x) = max(ma.EPSILON, x);
+constrain_to_positive = idle : par(i, N, strict_positivize(_)); // Energie levels have to be > 0
 reset_source_sink(source, sink) = idle 
                                     <: ba.selector(0,N) * 0 + source, // E(0) is unchanged                        
                                     par(i, N-2, ba.selector(i+1,N)), 
@@ -147,7 +148,7 @@ energy(excite, source, sink) = E(excite, source, sink) ~ idle; // feed back the 
 strip_source_sink = idle <: par(i, N-2, ba.selector(i+1,N)); // remove source and sink from output
 
 
-safe_input(excite, source, sink) = ba.if(excite==0, 0, 1), positivize(source), positivize(sink);
+safe_input(excite, source, sink) = ba.if(excite==0, 0, 1), strict_positivize(source), strict_positivize(sink);
 
 // input: exciter (bool), source, sink
 process = _, _, _ : safe_input : energy : strip_source_sink;

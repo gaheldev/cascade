@@ -1,0 +1,13 @@
+import("stdfaust.lib");
+
+
+declare name "Cascade Library";
+declare version "0.0.1";
+
+
+
+E = component("energy.dsp");
+
+
+periodic_trigger = os.lf_imptrain(1/hslider("excite time (s)", 5, 1, 15, 0.1));
+
