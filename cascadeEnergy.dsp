@@ -11,10 +11,10 @@ import("stdfaust.lib");
 
 /* =========== Settings ==============*/
 
-source = hslider("E0",1,0,1,0.01);
-sink = hslider("E%N",0.1,0,1,0.01);
+source = hslider("source",1,0,1,0.01);
+sink = hslider("sink",0.1,0,1,0.01);
 
-N = 5;
+N = 10;
 
 
 dt = ba.samp2sec(1);
@@ -89,9 +89,16 @@ transfer_to_higher = idle
 
 /* =========== Noise ==============*/
 
-ksi = hslider("noise", 1, 0, 2, 0.01);
+ksi = hslider("noise", 1, 0, 2, 0.001);
 g(i) = ksi * k(i)^(5/4) * _^(1/2);
-noise_generator(i) = no.gnoise(10) * g(i);
+
+noise_speed = hslider("Noise speed", 1, 0, 10, 0.1);
+sin_noise(x) = (sin(x*noise_speed) + sin(ma.PI/2*x*noise_speed) + sin(sqrt(2)*x*noise_speed)) / 20 ; // smooth pseudo random noise
+smooth_noise = sin_noise(ba.samp2sec(ba.time));
+
+// noise_generator(i) = no.gnoise(10) * g(i);
+noise_generator(i) = smooth_noise * g(i);
+
 
 add_noise = case {
     (0) => _*0;
@@ -122,7 +129,7 @@ excite = button("Excite");
 
 exciter = idle
           <: ba.selector(0,N), // source
-             par(i, N-2, (ba.selector(i+1,N), hslider("E %{i}", 0.1, 0, 1, 0.01) : _ * (1-excite), _ * excite :> _) ),
+             par(i, N-2, (ba.selector(i+1,N), hslider("E%{i}", 0.1, 0, 1, 0.01) : _ * (1-excite), _ * excite :> _) ),
              ba.selector(N-1,N); // sink
 
 
@@ -142,4 +149,5 @@ energy = E ~ idle; // feed back the energy output to itself
 strip_source_sink = idle <: par(i, N-2, ba.selector(i+1,N)); // remove source and sink from output
 
 process = energy : strip_source_sink;
+
 
