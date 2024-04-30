@@ -1,6 +1,13 @@
 import("stdfaust.lib");
-E = component("cascadeEnergy.dsp");
+ca = library("cascade.lib");
 
-id = 1, 1, 1;
+oscillators = os.osc(262), os.osc(330), os.osc(392);
+N = outputs(oscillators);
 
-process = os.osc(262), os.osc(330), os.osc(392) , E : route(6,6, 1,1,4,2, 2,3,5,4, 3,5,6,6): *, *, * :> _ <: _,_ ; 
+
+// normalize(x) = x : par(i, outputs(x), _ / ba.slidingSum(outputs(x), x));
+
+energy = ca.cascade_exciter(N);
+
+
+process = oscillators, energy : si.dot(N) ; 

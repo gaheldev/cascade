@@ -3,8 +3,14 @@ declare version "0.0.1";
 
 
 import("stdfaust.lib");
+
 e = library("energy.lib");
 
+
+
+energy = e.energy;
+
+strip_source_sink = e.strip_source_sink;
 
 
 periodic_trigger = os.lf_imptrain(1/hslider("excite time (s)", 5, 1, 15, 0.1));

@@ -167,4 +167,3 @@ energy(N, exciter, source, sink) = cascade_env.safe_input(exciter, source, sink)
                                    : cascade_env.compute_energy(N)
                                    : strip_source_sink(N);
 
-
