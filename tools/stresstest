@@ -1,0 +1,31 @@
+#!/bin/bash
+
+sleeptime="$1"
+intmax="$2" #128, 1024, 16384
+
+for j in {0..1000}
+do
+	for i in $(seq 0 $(($intmax/10)))
+	do
+		sleep $sleeptime
+		. oscparam 9 0
+
+		sleep $sleeptime
+		. oscparam 1 $(($i*10))
+
+		sleep $sleeptime
+		. oscparam 9 $intmax
+	done
+
+	sleep $sleeptime
+	. oscparam 9 0
+
+	for i in $(seq $intmax -1 0)
+	do
+		sleep $sleeptime
+		. oscparam 1 $i
+	done
+
+	sleep $sleeptime
+	. oscparam 9 $intmax
+done

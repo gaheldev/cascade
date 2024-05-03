@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# Usage:
+#
+# oscparam $param_number $value
+# 	param_number: ignore page count
+# 	value: (0-MAXVALUE)
+
+page=$(("$1"/8 + 1)) # 8 params per page
+param=$(("$1"%8))
+
+sendosc 127.0.0.1 5510 /project/page/selected i $page
+sendosc 127.0.0.1 5510 /project/param/$param/value i $2
