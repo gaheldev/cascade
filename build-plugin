@@ -1,0 +1,29 @@
+#!/bin/bash
+
+
+dsp="$1"
+build_path=${dsp%.*}
+
+name=$(basename ${dsp%.*})
+
+plugin_path=plugins/juce/$name
+mkdir -p $plugin_path
+
+project_exists=false
+if [ ! -f "${plugin_path}/${name}.jucer" ]; then
+    project_exists=true
+fi
+
+faust2juce -midi -jucemodulesdir /usr/share/juce/modules/ $dsp
+mv $build_path/* $plugin_path/
+rm -r $build_path
+
+cd $plugin_path
+project_file="${name}".jucer
+
+if [ "$project_exists" = false ] ; then
+	Projucer --resave $project_file &>/dev/null # returns an error event when working properly
+fi
+
+cd Builds/LinuxMakefile/
+env CONFIG=Release make VST3
