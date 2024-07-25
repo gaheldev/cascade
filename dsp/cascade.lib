@@ -25,6 +25,6 @@ cascade_exciter(N) = excite, E0, En : e.energy(N+2) with {
 };
 
 cascade_to_excite(N,excite) = excite, E0, En : e.energy(N+2) with {
-    E0 = hslider("source]", 1, 0, 1, 0.01);
+    E0 = hslider("source", 1, 0, 1, 0.01);
     En = hslider("sink", 0.1, 0, 1, 0.01);
 };
