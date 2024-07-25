@@ -1,7 +1,6 @@
 declare name "Cascade Library";
 declare version "0.0.1";
 
-declare options "[osc:on]";
 
 
 import("stdfaust.lib");
@@ -21,11 +20,11 @@ periodic_trigger = os.lf_imptrain(1/hslider("excite time (s)", 5, 1, 15, 0.1));
 // N = number of modes (without counting source and sink)
 cascade_exciter(N) = excite, E0, En : e.energy(N+2) with {
     excite = button("Excite");
-    E0 = hslider("source[osc:/E0]", 1, 0, 1, 0.01);
-    En = hslider("sink[osc:/E4]", 0.1, 0, 1, 0.01); // osc from unity has only 5 energy levels so En = E4
+    E0 = hslider("source", 1, 0, 1, 0.01);
+    En = hslider("sink", 0.1, 0, 1, 0.01);
 };
 
 cascade_to_excite(N,excite) = excite, E0, En : e.energy(N+2) with {
-    E0 = hslider("source[osc:/E0]", 1, 0, 1, 0.01);
-    En = hslider("sink[osc:/E4]", 0.1, 0, 1, 0.01); // osc from unity has only 5 energy levels so En = E4
+    E0 = hslider("source]", 1, 0, 1, 0.01);
+    En = hslider("sink", 0.1, 0, 1, 0.01);
 };

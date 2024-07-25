@@ -7,7 +7,6 @@ declare license "STK-4.3";
 declare name "Energy computation for Cascade Library";
 declare version "0.0.1";
 
-declare options "[osc:on]";
 
 
 import("stdfaust.lib");
@@ -24,15 +23,15 @@ cascade_env = environment{
     // dt = 1;
 
     parameters(x) = vgroup("Parameters",x);
-    nu = parameters(hslider("nu[osc:/nu]",1,0,1,0.01));
-    k0 = parameters(hslider("k0[osc:/k0]", 1, 0, 10, 0.01));
-    lambda = parameters(hslider("lambda[osc:/lambda]", 1.5, 1 + ma.EPSILON, 3, 0.01));
+    nu = parameters(hslider("nu",1,0,1,0.01));
+    k0 = parameters(hslider("k0", 1, 0, 10, 0.01));
+    lambda = parameters(hslider("lambda", 1.5, 1 + ma.EPSILON, 3, 0.01));
 
-    alpha = parameters(hslider("alpha[osc:/lambda]", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01));
-    beta = parameters(hslider("beta[osc:/beta]", 0.9, 1/2 + ma.EPSILON, 10, 0.01)); 
+    alpha = parameters(hslider("alpha", 0.1, ma.EPSILON, 1/2 - ma.EPSILON, 0.01));
+    beta = parameters(hslider("beta", 0.9, 1/2 + ma.EPSILON, 10, 0.01)); 
 
-    a = parameters(hslider("a[osc:/a]", 1, 0, 10, 0.01)); 
-    b = parameters(hslider("b[osc:/b]", 1, ma.EPSILON, 10, 0.01)); 
+    a = parameters(hslider("a", 1, 0, 10, 0.01)); 
+    b = parameters(hslider("b", 1, ma.EPSILON, 10, 0.01)); 
 
     k(i) = k0 * (lambda)^(i+1); // index starts from 0, paper starts from 1
 
@@ -93,7 +92,7 @@ cascade_env = environment{
 
     /* =========== Noise ==============*/
 
-    eta = parameters(hslider("noise[osc:/eta]", 1, 0, 2, 0.001));
+    eta = parameters(hslider("noise", 1, 0, 2, 0.001));
     g(i) = eta * k(i)^(1/2) * _^(5/4);
 
     noise_generator(i) = no.gnoise(10) * g(i);
