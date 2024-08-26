@@ -1,0 +1,38 @@
+{
+    "name": "Cascade Spectral Synth",
+
+    "importPaths": [ "." ],
+    "sourcePaths": [ "." ],
+    "stringImportPaths": [ "." ],
+
+    "targetType": "dynamicLibrary",
+
+    "dflags-linux-dmd": ["-defaultlib=libphobos2.a"],
+    "dflags-osx-ldc": ["-static"],
+    "dflags-linux-ldc": ["-link-defaultlib-shared=false"],
+    "dflags-linux-x86_64-ldc": ["-fvisibility=hidden"],
+    "dflags-windows-ldc": ["-mscrtlib=libcmt","-fvisibility=hidden", "-link-defaultlib-shared=false"],
+
+    "versions": ["futureVST3MIDICC"],
+
+    "dependencies":
+    {
+        "dplug:vst3": { "path": "/home/gael/code/audio/Dplug" },
+        "dplug:lv2": { "path": "/home/gael/code/audio/Dplug"}
+    },
+
+    "configurations": [
+        {
+            "name": "VST3",
+            "versions": ["VST3"],
+            "targetType": "dynamicLibrary",
+	    "lflags-linux-ldc": [ "-lz" ]
+        },
+        {
+            "name": "LV2",
+            "versions": ["LV2"],
+            "targetType": "dynamicLibrary",
+	    "lflags-linux-ldc": [ "-lz" ]
+        }
+    ]
+}
