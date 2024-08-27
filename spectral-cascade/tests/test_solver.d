@@ -6,7 +6,8 @@ void main()
 {
 	float[] levels = [1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
 
-	Solver sol = new Solver(levels);
+	Solver sol = new Solver();
+	sol.levels = levels;
 
 	foreach (i; 0..20)
 	{

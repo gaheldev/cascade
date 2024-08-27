@@ -22,6 +22,17 @@ enum : int
 {
     paramOsc1WaveForm,
     paramOutputGain,
+	paramAttack,
+	paramE0,
+	paramEn,
+	paramNu,
+	paramK0,
+	paramLambda,
+	paramAlpha,
+	paramBeta,
+	paramA,
+	paramB,
+	paramEta,
 }
 
 static immutable waveFormNames = [__traits(allMembers, WaveForm)];
@@ -50,8 +61,22 @@ public:
     override Parameter[] buildParameters()
     {
         auto params = makeVec!Parameter();
+
         params ~= mallocNew!EnumParameter(paramOsc1WaveForm, "Waveform", waveFormNames, WaveForm.init);
         params ~= mallocNew!GainParameter(paramOutputGain, "Output Gain", 6.0, 0.0);
+
+        params ~= mallocNew!LinearFloatParameter(paramAttack, "Attack", "s", 0.0, 0.2, 0.005);
+        params ~= mallocNew!LinearFloatParameter(paramE0, "E0", "", 0.0, 1.0, 1.0);
+        params ~= mallocNew!LinearFloatParameter(paramEn, "En", "", 0.0, 1.0, 1.0);
+        params ~= mallocNew!LinearFloatParameter(paramNu, "nu", "", 0.0, 1.0, 1.0);
+        params ~= mallocNew!LinearFloatParameter(paramK0, "k0", "", 0.0, 10.0, 1.0);
+        params ~= mallocNew!LinearFloatParameter(paramLambda, "lambda", "", 1.0 + float.min_normal, 3.0, 1.5);
+        params ~= mallocNew!LinearFloatParameter(paramAlpha, "alpha", "", float.min_normal, 0.5-float.min_normal, 0.1);
+        params ~= mallocNew!LinearFloatParameter(paramBeta, "beta", "", 0.5+float.min_normal, 10.0, 0.9);
+        params ~= mallocNew!LinearFloatParameter(paramA, "a,", "", 0.0, 10.0, 1.0);
+        params ~= mallocNew!LinearFloatParameter(paramB, "b,", "", float.min_normal, 10.0, 1.0);
+        params ~= mallocNew!LinearFloatParameter(paramEta, "eta", "", 0.0, 2.0, 1.0);
+
         return params.releaseData();
     }
 
@@ -75,6 +100,20 @@ public:
 
     override void processAudio(const(float*)[] inputs, float*[] outputs, int frames, TimeInfo info)
     {
+        _synth.waveForm = readParam!WaveForm(paramOsc1WaveForm);
+        _synth.outputGain = convertDecibelToLinearGain(readParam!float(paramOutputGain));
+        _synth.attack = readParam!float(paramAttack);
+        _synth.e0 = readParam!float(paramE0);
+        _synth.en = readParam!float(paramEn);
+        _synth.nu = readParam!float(paramNu);
+        _synth.k0 = readParam!float(paramK0);
+        _synth.lambda = readParam!float(paramLambda);
+        _synth.alpha = readParam!float(paramAlpha);
+        _synth.beta = readParam!float(paramBeta);
+        _synth.a = readParam!float(paramA);
+        _synth.b = readParam!float(paramB);
+        _synth.eta = readParam!float(paramEta);
+
         // process MIDI - note on/off and similar
         foreach (msg; getNextMidiMessages(frames))
         {
@@ -90,9 +129,6 @@ public:
             else if (msg.isPitchBend())
                 _synth.setPitchBend(msg.pitchBend());
         }
-
-        _synth.waveForm = readParam!WaveForm(paramOsc1WaveForm);
-        _synth.outputGain = convertDecibelToLinearGain(readParam!float(paramOutputGain));
 
         foreach (ref sample; outputs[0][0 .. frames])
             sample = _synth.nextSample();

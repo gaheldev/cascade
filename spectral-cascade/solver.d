@@ -1,5 +1,6 @@
 import std.math;
 import std.algorithm;
+import config;
 
 
 class Solver
@@ -7,16 +8,19 @@ class Solver
 @safe pure nothrow @nogc:
 public:
 
-    this(float[] energy_levels)
+    this()
     {
-		// TODO: initialize levels
-		levels = energy_levels;
-		_N = cast(int) levels.length - 1;
     }
+
+	void excite(float amount)
+	{
+		foreach (n; 1.._N-1)
+			levels[n] = amount;
+	}
 
 	void nextStep()
 	{
-		foreach (n; 0..cast(int)levels.length)
+		foreach (n; 0..cast(int) levels.length)
 			levels[n] = nextLevel(n);
 	}
 	
@@ -73,9 +77,7 @@ public:
 		return eta * k(i)^^delta * levels[i]^^gamma;
 	}
 	
-	float[] levels;
-	float e0 = 1;
-	float en = 0.1;
+	float[N_HARMONICS+2] levels;
 	float delta_t = 1.0/48000;
 	float nu = 1;
 	float k0 = 1;
@@ -90,6 +92,6 @@ public:
 private:
 	float delta = 1.0/2;
 	float gamma = 5.0/4;
-	float _N = 11;
+	int _N = N_HARMONICS+1;
 		
 }
