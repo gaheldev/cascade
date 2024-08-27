@@ -1,2 +1,6 @@
 builds/
 dub.selections.json
+
+# only consider .d files in tests/
+tests/*
+!tests/*.d
