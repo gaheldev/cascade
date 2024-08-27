@@ -1,5 +1,5 @@
 {
-    "name": "Cascade Spectral Synth",
+    "name": "cascade-spectral-synth",
 
     "importPaths": [ "." ],
     "sourcePaths": [ "." ],
