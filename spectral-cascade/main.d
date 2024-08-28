@@ -9,14 +9,12 @@ import dplug.core, dplug.client;
 
 import synth;
 import oscillator;
+import config;
 
 
 // This define entry points for plugin formats, 
 // depending on which version identifiers are defined.
 mixin(pluginEntryPoints!SpectralCascade);
-
-/// Number of max notes playing at the same time
-enum maxVoices = 6;
 
 enum : int
 {

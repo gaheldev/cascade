@@ -2,6 +2,7 @@ import std.math;
 import dplug.core;
 import oscillator;
 import solver;
+import config;
 
 
 struct Synth(size_t voicesCount)
@@ -161,7 +162,7 @@ public:
     {
         _noteOriginal = note;
 		float fundamental = convertMIDINoteToFrequency(note + bend * 12);
-		foreach (i; 0..int(_osc.length))
+		foreach (i; 0..N_HARMONICS)
 			_osc[i].frequency = fundamental * (i+1);
 
         _isPlaying = true;
@@ -215,8 +216,8 @@ public:
 		_solver.nextStep();
 
 		float harmonicSample = 0.0;
-		foreach (n; 1..int(_solver.levels.length-1))
-			harmonicSample += _solver.levels[n] * _osc[n-1].nextSample();
+		foreach (n; 0..N_HARMONICS)
+			harmonicSample += _solver.levels[n+1] * _osc[n].nextSample();
         return harmonicSample * _volume;
     }
 
