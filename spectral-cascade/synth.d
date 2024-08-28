@@ -190,7 +190,7 @@ public:
     {
         release();
 		initOsc(sampleRate);
-		/* initLevels(1.0, 1.0); */
+		initLevels(1.0, 1.0);
 		_solver.delta_t = 1.0/sampleRate;
     }
 
@@ -202,10 +202,9 @@ public:
 
 	void initLevels(float e0, float en)
 	{
-		_solver.levels[0] = e0;
-		_solver.levels[$-1] = en;
-		foreach (n; 1..int(_solver.levels.length-1))
-			_solver.levels[n] = _excitation;
+        _solver.levels[0] = e0;
+        _solver.levels[$-1] = en;
+        _solver.excite(_excitation);
 	}
 
     float nextSample()
@@ -228,6 +227,6 @@ private:
     int _noteOriginal = -1;
     float _volume = 1.0f;
 
-	float _excitation = 1.0;
+	float _excitation = 1.0f;
 	Solver _solver = new Solver();
 }

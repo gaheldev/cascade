@@ -3,6 +3,8 @@ import std.algorithm;
 import config;
 
 
+const float DENORMAL = 0.0001;
+
 class Solver
 {
 @safe pure nothrow @nogc:
@@ -21,7 +23,8 @@ public:
 	void nextStep()
 	{
 		foreach (n; 0..cast(int) levels.length)
-			levels[n] = nextLevel(n);
+			_newLevels[n] = nextLevel(n);
+        levels = _newLevels;
 	}
 	
 	float nextLevel(int n)
@@ -44,7 +47,7 @@ public:
 
 	float f(float x)
 	{
-		if (x==0) return 0;
+		if (x<=DENORMAL) return 0;
 
 		return a / (x^^alpha * (1 + (a/b) * x^^(beta-alpha)));
 	}
@@ -60,9 +63,8 @@ public:
 	{
 		float e_from = levels[i-1];
 		float e_to = levels[i];
-		if (e_from<=0.0001) return 0;
-        return 0;
-        return k(i) * e_from;
+		if (e_from<=DENORMAL) return 0;
+		if (e_to<=DENORMAL) return 0;
 
 		return k(i) * e_to^^1.5 * f(e_to/e_from);
 	}
@@ -75,7 +77,7 @@ public:
 
 	float g(int i)
 	{
-        return 0;
+        if (eta==0) return 0;
 		return eta * k(i)^^delta * levels[i]^^gamma;
 	}
 	
@@ -95,5 +97,6 @@ private:
 	float delta = 1.0/2;
 	float gamma = 5.0/4;
 	int _N = N_HARMONICS+1;
+	float[N_HARMONICS+2] _newLevels;
 		
 }

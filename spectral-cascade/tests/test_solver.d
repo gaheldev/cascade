@@ -11,7 +11,7 @@ void main()
 	Solver sol = new Solver();
 	sol.levels = levels;
 
-	foreach (i; 0..20)
+	foreach (i; 0..10000)
 	{
 		writeln(sol.levels);
 		sol.nextStep();
