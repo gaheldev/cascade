@@ -134,7 +134,7 @@ public:
 
     void waveForm(WaveForm value)
     {
-		foreach (osc; _osc)
+		foreach (ref osc; _osc)
 			osc.waveForm = value;
     }
 
@@ -189,13 +189,13 @@ public:
     {
         release();
 		initOsc(sampleRate);
-		initLevels(1.0, 1.0);
+		/* initLevels(1.0, 1.0); */
 		_solver.delta_t = 1.0/sampleRate;
     }
 
 	void initOsc(float sampleRate)
 	{
-		foreach (osc; _osc)
+		foreach (ref osc; _osc)
 			osc.sampleRate = sampleRate;
 	}
 

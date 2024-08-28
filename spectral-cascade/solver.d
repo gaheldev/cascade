@@ -34,8 +34,7 @@ public:
 		                                 - T(n+1)
 		                                 + g(n)*noise()
 		                                );
-		/* return max(e,0); */
-		return e;
+		return max(e,0);
 	}
 
 	float k(int i)
@@ -43,7 +42,7 @@ public:
 		return k0 * lambda^^(i+1);
 	}
 
-	float f(int i, float x)
+	float f(float x)
 	{
 		if (x==0) return 0;
 
@@ -61,9 +60,11 @@ public:
 	{
 		float e_from = levels[i-1];
 		float e_to = levels[i];
-		if (e_from==0) return 0;
+		if (e_from<=0.0001) return 0;
+        return 0;
+        return k(i) * e_from;
 
-		return k(i) * e_to^^(1.5) * f(i, e_to/e_from);
+		return k(i) * e_to^^1.5 * f(e_to/e_from);
 	}
 
 	float noise()
@@ -74,10 +75,11 @@ public:
 
 	float g(int i)
 	{
+        return 0;
 		return eta * k(i)^^delta * levels[i]^^gamma;
 	}
 	
-	float[N_HARMONICS+2] levels;
+	float[N_HARMONICS+2] levels = 1.0;
 	float delta_t = 1.0/48000;
 	float nu = 1;
 	float k0 = 1;
