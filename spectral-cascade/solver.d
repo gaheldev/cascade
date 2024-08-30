@@ -1,5 +1,7 @@
 import std.math;
 import std.algorithm;
+import std.random;
+import gaussiansampler : PureRandomGenerator;
 import config;
 
 
@@ -10,6 +12,7 @@ public:
 
     this()
     {
+        _rng = PureRandomGenerator(123456789);
     }
 
     void excite(float amount)
@@ -20,7 +23,7 @@ public:
 
     void nextStep()
     {
-        reset_cache(c_T);
+        _reset_cache(c_T);
         foreach (n; 0..cast(int) levels.length)
             _newLevels[n] = nextLevel(n);
         levels = _newLevels;
@@ -83,7 +86,7 @@ public:
 
     float T(int i)
     {
-        if (eta==0) return 0; // DEBUG: to test performance
+        /* if (eta==0) return 0; // DEBUG: to test performance */
         if (USE_CACHE && c_T[i] != -1)
             return c_T[i];
             
@@ -98,25 +101,35 @@ public:
 
     float noise()
     {
-        // TODO: return gauss_sample / delta_t^^0.5
-        return 0;
+        if (eta==0)
+            return 0;
+        // return gauss_sample / delta_t^^0.5
+        return _rng.gaussianNoiseApprox(5) * _noise_stddev;
+        /* return _rng.gaussianNoise() * _noise_stddev; */
     }
 
     float g(int i)
     {
-        return 0; // DEBUG: to exclude from computation
+        return 0;
         if (eta==0) return 0;
-        return eta * k(i)^^delta * levels[i]^^gamma;
+        return eta * k(i)^^_delta * levels[i]^^_gamma;
     }
     
     float[N_HARMONICS+2] levels = 1.0;
-    float delta_t = 1.0/48000;
+
+    @property float delta_t() { return m_delta_t; }
+    @property float delta_t(float value)
+    {
+        if (value != m_delta_t)
+            _noise_stddev = _get_noise_stddev(value);
+        return m_delta_t = value;
+    }
 
     @property float nu() { return m_nu; }
     @property float nu(float value)
     {
         if (value != m_nu)
-            reset_cache(c_dissipation);
+            _reset_cache(c_dissipation);
         return m_nu = value;
     }
 
@@ -124,7 +137,7 @@ public:
     @property float k0(float value)
     {
         if (value != m_k0)
-            reset_cache(c_k);
+            _reset_cache(c_k);
         return m_k0 = value;
     }
 
@@ -133,7 +146,7 @@ public:
     @property float lambda(float value)
     {
         if (value != m_lambda)
-            reset_cache(c_lambda_pow);
+            _reset_cache(c_lambda_pow);
         return m_lambda = value;
     }
 
@@ -145,21 +158,29 @@ public:
 	
 
 private:
-    float delta = 1.0/2;
-    float gamma = 5.0/4;
+    float _delta = 1.0/2;
+    float _gamma = 5.0/4;
     int _N = N_HARMONICS+1;
     float[N_HARMONICS+2] _newLevels;
 
+    // @properties
+    float m_delta_t = 1.0/48000.0;
     float m_nu = 1;
     float m_k0 = 1;
 	float m_lambda = 1.5;
 
+    // rng
+    PureRandomGenerator _rng;
+    float _get_noise_stddev(float delta_t) { return 1.0 / delta_t^^0.5; }
+    float _noise_stddev = 1.0 / (1.0 / 48000.0)^^0.5; // 1 / (delta_t^^0.5)
+
+    // caches
     const int CACHE_SIZE = 2 * N_HARMONICS; // a bit extra space
     float[CACHE_SIZE] c_lambda_pow = -1;
     float[CACHE_SIZE] c_k = -1;
     float[CACHE_SIZE] c_T = -1;
     float[CACHE_SIZE] c_dissipation = -1;
 
-    void reset_cache(ref float[CACHE_SIZE] cache) { cache[0..$] = -1.0; }
+    void _reset_cache(ref float[CACHE_SIZE] cache) { cache[0..$] = -1.0; }
 
 }
