@@ -1,4 +1,6 @@
 import std.math;
+// override some math functions
+import dplug.core.math : sin = fast_sin;
 
 
 enum double TAU = 2 * PI;

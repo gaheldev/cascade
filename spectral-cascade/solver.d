@@ -1,4 +1,5 @@
 import std.math;
+// override some math functions
 import dplug.core.math : pow = fast_pow, sqrt = fast_sqrt;
 import std.algorithm;
 import std.random;
