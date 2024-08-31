@@ -1,7 +1,7 @@
 import std.math;
 import std.algorithm;
 import std.random;
-import gaussiansampler : PureRandomGenerator;
+import gaussiansampler : TableGaussianGenerator, FastPureRandomGenerator, PureRandomGenerator;
 import config;
 
 
@@ -12,7 +12,7 @@ public:
 
     this()
     {
-        _rng = PureRandomGenerator(123456789);
+        _rng = TableGaussianGenerator(123456789);
     }
 
     void excite(float amount)
@@ -32,6 +32,7 @@ public:
     float nextLevel(int n)
     {
         if (n==0 || n==_N) return levels[n];
+        if (levels[n] <= DENORMAL) return 0.0;
 
         // TODO: stop processing below a small value and return 0
         float e = levels[n] + delta_t * (  dissipation(n)
@@ -74,7 +75,7 @@ public:
     {
         if (x<=DENORMAL) return 0;
 
-        return a / (x^^alpha * (1 + (a/b) * x^^(beta-alpha)));
+        return a * b / (b * x^^alpha + a * x^^beta);
     }
 
     float dissipation(int i)
@@ -101,18 +102,31 @@ public:
 
     float noise()
     {
-        if (eta==0)
-            return 0;
+        // TODO: optimize noise -> wavetable?
+        if (eta==0) return 0;
         // return gauss_sample / delta_t^^0.5
-        return _rng.gaussianNoiseApprox(5) * _noise_stddev;
-        /* return _rng.gaussianNoise() * _noise_stddev; */
+        return _rng.gaussianNoise(0.0, _noise_stddev);
+    }
+
+    float k_delta(int i)
+    {
+        if (c_k_delta[i] == -1)
+            c_k_delta[i] = k(i)^^_delta;
+        return c_k_delta[i];
+    }
+
+    float levels_gamma(int i)
+    {
+        if (c_levels_gamma[i] == -1)
+            c_levels_gamma[i] = levels[i]^^_delta;
+        return c_levels_gamma[i];
+
     }
 
     float g(int i)
     {
-        return 0;
         if (eta==0) return 0;
-        return eta * k(i)^^_delta * levels[i]^^_gamma;
+        return eta * k_delta(i) * levels_gamma(i);
     }
     
     float[N_HARMONICS+2] levels = 1.0;
@@ -170,7 +184,7 @@ private:
 	float m_lambda = 1.5;
 
     // rng
-    PureRandomGenerator _rng;
+    TableGaussianGenerator _rng;
     float _get_noise_stddev(float delta_t) { return 1.0 / delta_t^^0.5; }
     float _noise_stddev = 1.0 / (1.0 / 48000.0)^^0.5; // 1 / (delta_t^^0.5)
 
@@ -180,6 +194,8 @@ private:
     float[CACHE_SIZE] c_k = -1;
     float[CACHE_SIZE] c_T = -1;
     float[CACHE_SIZE] c_dissipation = -1;
+    float[CACHE_SIZE] c_k_delta = -1;
+    float[CACHE_SIZE] c_levels_gamma = -1;
 
     void _reset_cache(ref float[CACHE_SIZE] cache) { cache[0..$] = -1.0; }
 

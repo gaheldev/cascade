@@ -9,12 +9,14 @@ void main()
     levels[0] = 1.0;
 
 	Solver sol = new Solver();
-	sol.levels = levels;
+    foreach (n; 0..10)
+    {
+        sol.levels = levels;
 
-	foreach (i; 0..10000)
-	{
-		writeln(sol.levels);
-		sol.nextStep();
-	}
-		
+        foreach (i; 0..1000)
+        {
+            /* writeln(sol.levels); */
+            sol.nextStep();
+        }
+    }
 }

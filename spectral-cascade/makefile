@@ -8,6 +8,6 @@ deploy: build
 	# cp -r builds/Linux-64b-LV2/Gahel\ Spectral\ Cascade.lv2/ ~/.lv2/
 
 test_solver:
-	cd tests; ldc2 test_solver.d ../solver.d ../config.d
+	cd tests; ldc2 test_solver.d ../solver.d ../config.d ../gaussiansampler.d
 	./tests/test_solver
 	
