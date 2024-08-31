@@ -137,6 +137,6 @@ public:
     }
 
 private:
-    Synth!maxVoices _synth;
+    Synth!N_VOICES _synth;
 }
 

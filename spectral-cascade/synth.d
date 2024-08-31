@@ -32,28 +32,29 @@ public:
             v.waveForm = value;
     }
 
+    int getRoundRobin()
+    {
+        _lastVoice = (_lastVoice + 1) % N_VOICES;
+        return _lastVoice;
+    }
+
     void markNoteOn(int note, int velocity)
     {
-        foreach (ref v; _voices)
-            if (!v.isPlaying)
-                v.play(note,
-				       velocity,
-				       _pitchBend,
-				       attack,
-				       e0,
-				       en,
-				       nu,
-				       k0,
-				       lambda,
-				       alpha,
-				       beta,
-				       a,
-				       b,
-				       eta,
-				      ); // note: here pitch bend only applied at start of note, and not updated later.
-
-		// TODO: round robin
-        // no free voice available, skip
+        _voices[getRoundRobin()].play(note,
+                                      velocity,
+                                      _pitchBend,
+                                      attack,
+                                      e0,
+                                      en,
+                                      nu,
+                                      k0,
+                                      lambda,
+                                      alpha,
+                                      beta,
+                                      a,
+                                      b,
+                                      eta,
+                                     ); // note: here pitch bend only applied at start of note, and not updated later.
     }
 
     void markNoteOff(int note)
@@ -112,6 +113,7 @@ public:
 
 private:
     enum double _internalGain = (1.0 / (voicesCount / SQRT1_2));
+    int _lastVoice = 0;
 
     float _pitchBend = 0.0f; // -1 to 1, change one semitone
 
