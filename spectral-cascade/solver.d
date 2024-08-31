@@ -1,4 +1,5 @@
 import std.math;
+import dplug.core.math : pow = fast_pow, sqrt = fast_sqrt;
 import std.algorithm;
 import std.random;
 import gaussiansampler : TableGaussianGenerator, FastPureRandomGenerator, PureRandomGenerator;
@@ -75,14 +76,14 @@ public:
     {
         if (x<=DENORMAL) return 0;
 
-        return a * b / (b * x^^alpha + a * x^^beta);
+        return a * b / (b * x.pow(alpha) + a * x.pow(beta));
     }
 
     float dissipation(int i)
     {
         if (i==0 || i==_N) return 0;
 
-        return -nu * k(i)^^2 * levels[i];
+        return -nu * k(i) * k(i) * levels[i];
     }
 
     float T(int i)
@@ -96,13 +97,12 @@ public:
         if (e_from<=DENORMAL) return 0;
         if (e_to<=DENORMAL) return 0;
 
-        c_T[i] = k(i) * e_to^^1.5 * f(e_to/e_from);
+        c_T[i] = k(i) * e_to.pow(1.5) * f(e_to/e_from);
         return c_T[i];
     }
 
     float noise()
     {
-        // TODO: optimize noise -> wavetable?
         if (eta==0) return 0;
         // return gauss_sample / delta_t^^0.5
         return _rng.gaussianNoise(0.0, _noise_stddev);
@@ -111,14 +111,14 @@ public:
     float k_delta(int i)
     {
         if (c_k_delta[i] == -1)
-            c_k_delta[i] = k(i)^^_delta;
+            c_k_delta[i] = k(i).pow(_delta);
         return c_k_delta[i];
     }
 
     float levels_gamma(int i)
     {
         if (c_levels_gamma[i] == -1)
-            c_levels_gamma[i] = levels[i]^^_delta;
+            c_levels_gamma[i] = levels[i].pow(_delta);
         return c_levels_gamma[i];
 
     }
@@ -185,8 +185,9 @@ private:
 
     // rng
     TableGaussianGenerator _rng;
-    float _get_noise_stddev(float delta_t) { return 1.0 / delta_t^^0.5; }
-    float _noise_stddev = 1.0 / (1.0 / 48000.0)^^0.5; // 1 / (delta_t^^0.5)
+    // TODO: check std is correct (delta_t^^0.5 ?)
+    float _get_noise_stddev(float delta_t) { return 1.0 / sqrt(delta_t); }
+    float _noise_stddev = 1.0 / sqrt(1.0 / 48000.0); // 1 / (delta_t^^0.5)
 
     // caches
     const int CACHE_SIZE = 2 * N_HARMONICS; // a bit extra space
