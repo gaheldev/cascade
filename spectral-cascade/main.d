@@ -18,6 +18,7 @@ mixin(pluginEntryPoints!SpectralCascade);
 
 enum : int
 {
+    paramPanic,
     paramOsc1WaveForm,
     paramOutputGain,
 	paramAttack,
@@ -60,6 +61,8 @@ public:
     {
         auto params = makeVec!Parameter();
 
+        params ~= mallocNew!BoolParameter(paramPanic, "Panic", false);
+
         params ~= mallocNew!EnumParameter(paramOsc1WaveForm, "Waveform", waveFormNames, WaveForm.init);
         params ~= mallocNew!GainParameter(paramOutputGain, "Output Gain", 6.0, 0.0);
 
@@ -98,6 +101,8 @@ public:
 
     override void processAudio(const(float*)[] inputs, float*[] outputs, int frames, TimeInfo info)
     {
+        _synth.panic = readParam!bool(paramPanic);
+
         _synth.waveForm = readParam!WaveForm(paramOsc1WaveForm);
         _synth.outputGain = convertDecibelToLinearGain(readParam!float(paramOutputGain));
         _synth.attack = readParam!float(paramAttack);

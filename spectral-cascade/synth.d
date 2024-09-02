@@ -71,6 +71,15 @@ public:
                 v.release();
     }
 
+    @property bool panic() { return _panic; }
+    @property bool panic(bool value)
+    {
+        if (value)
+            foreach (ref v; _voices)
+                v.instantRelease;
+        return _panic = value;
+    }
+
     void reset(float sampleRate)
     {
         foreach (ref v; _voices)
@@ -79,6 +88,8 @@ public:
 
     float nextSample()
     {
+        if (panic) return 0;
+
         double sample = 0;
 
         foreach (ref v; _voices)
@@ -114,6 +125,7 @@ public:
 private:
     enum double _internalGain = (1.0 / (voicesCount / SQRT1_2));
     int _lastVoice = 0;
+    bool _panic = false;
 
     float _pitchBend = 0.0f; // -1 to 1, change one semitone
 
@@ -172,7 +184,7 @@ public:
 
 		// TODO: handle attack
 
-		initLevels(e0, en);
+		initLevels(e0, en, _excitation);
 		_solver.nu = nu;
 		_solver.k0 = k0;
 		_solver.lambda = lambda;
@@ -188,11 +200,16 @@ public:
         _isPlaying = false;
     }
 
+    void instantRelease()
+    {
+        _isPlaying = false;
+    }
+
     void reset(float sampleRate)
     {
         release();
 		initOsc(sampleRate);
-		initLevels(1.0, 1.0);
+		initLevels(0.0, 0.0, 0.0);
 		_solver.delta_t = 1.0/sampleRate;
     }
 
@@ -202,11 +219,11 @@ public:
 			osc.sampleRate = sampleRate;
 	}
 
-	void initLevels(float e0, float en)
+	void initLevels(float e0, float en, float exciteAmount)
 	{
         _solver.levels[0] = e0;
         _solver.levels[$-1] = en;
-        _solver.excite(_excitation);
+        _solver.excite(exciteAmount);
 	}
 
     float nextSample()
