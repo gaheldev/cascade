@@ -32,29 +32,34 @@ public:
             v.waveForm = value;
     }
 
-    int getRoundRobin()
+    struct RoundRobin(int numberOfElements)
     {
-        _lastVoice = (_lastVoice + 1) % N_VOICES;
-        return _lastVoice;
+        int next()
+        {
+            current = (current + 1) % numberOfElements;
+            return current;
+        }
+
+        int current = 0;
     }
 
     void markNoteOn(int note, int velocity)
     {
-        _voices[getRoundRobin()].play(note,
-                                      velocity,
-                                      _pitchBend,
-                                      attack,
-                                      e0,
-                                      en,
-                                      nu,
-                                      k0,
-                                      lambda,
-                                      alpha,
-                                      beta,
-                                      a,
-                                      b,
-                                      eta,
-                                     ); // note: here pitch bend only applied at start of note, and not updated later.
+        _voices[_roundRobin.next()].play(note,
+                                         velocity,
+                                         _pitchBend,
+                                         attack,
+                                         e0,
+                                         en,
+                                         nu,
+                                         k0,
+                                         lambda,
+                                         alpha,
+                                         beta,
+                                         a,
+                                         b,
+                                         eta,
+                                        ); // note: here pitch bend only applied at start of note, and not updated later.
     }
 
     void markNoteOff(int note)
@@ -124,7 +129,7 @@ public:
 
 private:
     enum double _internalGain = (1.0 / (voicesCount / SQRT1_2));
-    int _lastVoice = 0;
+    RoundRobin!voicesCount _roundRobin;
     bool _panic = false;
 
     float _pitchBend = 0.0f; // -1 to 1, change one semitone
