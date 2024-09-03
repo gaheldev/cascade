@@ -2,6 +2,7 @@ import std.math;
 import dplug.core;
 
 import oscillator;
+import roundrobin;
 import envelope;
 import solver;
 import config;
@@ -17,7 +18,7 @@ public:
     bool isPlaying()
     {
         foreach (v; _voices)
-            if (v.isPlaying())
+            if (v.isPlaying)
                 return true;
 
         return false;
@@ -34,49 +35,48 @@ public:
             v.waveForm = value;
     }
 
-    struct RoundRobin(int numberOfElements)
-    {
-        static assert(numberOfElements > 0, "Round robin requires at least 1 element");
-        int next()
-        {
-            current = (current + 1) % numberOfElements;
-            return current;
-        }
-
-        int current = -1;
-    }
-
     void markNoteOn(int note, int velocity)
     {
-        _voices[_roundRobin.next()].play(note,
-                                         velocity,
-                                         _pitchBend,
-                                         attackTime,
-                                         e0,
-                                         en,
-                                         nu,
-                                         k0,
-                                         lambda,
-                                         alpha,
-                                         beta,
-                                         a,
-                                         b,
-                                         eta,
-                                        ); // note: here pitch bend only applied at start of note, and not updated later.
+        VoiceStatus status;
+        status.note = note;
+        status.velocity = velocity;
+        status.pitchBend = _pitchBend;
+        status.attackTime = attackTime;
+        status.releaseTime = releaseTime;
+        status.e0 = e0;
+        status.en = en;
+        status.nu = nu;
+        status.k0 = k0;
+        status.lambda = lambda;
+        status.alpha = alpha;
+        status.beta = beta;
+        status.a = a;
+        status.b = b;
+        status.eta = eta;
+
+        _voiceQueue.push(status);
+        // note: here pitch bend only applied at start of note,
+        // and not updated later.
+        // TODO: remove and fix handleVoiceQueue()
+        int next = _roundRobin.next();
+        _roundRobin.markBusy(next);
+        /* auto v = _voices[next]; */
+        /* if (v.isPlaying) */
+        /*     _voiceQueue.push(status); */
+        /* _voices[_roundRobin.next()].play(status); */
+        _voices[next].play(_voiceQueue.pop());
     }
 
     void markNoteOff(int note)
     {
-        foreach (ref v; _voices)
-            if (v.isPlaying && (v.noteWithoutBend == note))
-                v.release();
+        // let the solver control the release
     }
 
     void markAllNotesOff()
     {
         foreach (ref v; _voices)
             if (v.isPlaying)
-                v.release();
+                v.quasiInstantRelease();
     }
 
     @property bool panic() { return _panic; }
@@ -84,7 +84,7 @@ public:
     {
         if (value)
             foreach (ref v; _voices)
-                v.instantRelease;
+                v.instantRelease();
         return _panic = value;
     }
 
@@ -94,9 +94,39 @@ public:
             v.reset(sampleRate);
     }
 
+    void updateRoundRobin()
+    {
+        foreach (i; 0..cast(int)_voices.length)
+            if (!_voices[i].isPlaying)
+                _roundRobin.markFree(i);
+    }
+
+    void handleVoiceQueue()
+    {
+        // TODO: isFull?
+        if (_voiceQueue.empty)
+            return;
+
+        int nextVoice = _roundRobin.next();
+        auto v = _voices[nextVoice];
+        if (v.isPlaying)
+        {
+            _roundRobin.markFreeing(nextVoice);
+            v.quasiInstantRelease();
+        }
+        else
+        {
+            _roundRobin.markBusy(nextVoice);
+            v.play(_voiceQueue.pop());
+        }
+    }
+
     float nextSample()
     {
         if (panic) return 0;
+
+        updateRoundRobin();
+        handleVoiceQueue();
 
         double sample = 0;
 
@@ -119,6 +149,7 @@ public:
 
     float outputGain = 1;
 	float attackTime = 0.005;
+	float releaseTime = 0.005;
 	float e0 = 1.0;
 	float en = 1.0;
 	float nu = 1.0;
@@ -137,11 +168,12 @@ private:
 
     float _pitchBend = 0.0f; // -1 to 1, change one semitone
 
-    VoiceStatus[voicesCount] _voices;
+    Voice[voicesCount] _voices;
+    Queue!(VoiceStatus, 10) _voiceQueue; // 10 notes at most in queue should be ok
 }
 
 
-struct VoiceStatus
+struct Voice
 {
 nothrow @nogc:
 public:
@@ -167,46 +199,39 @@ public:
         return _osc[0].waveForm;
     }
 
-    void play(int note,
-	          int velocity,
-	          float bend,
-		      float attackTime,
-	          float e0,
-	          float en,
-	          float nu,
-	          float k0,
-	          float lambda,
-	          float alpha,
-	          float beta,
-	          float a,
-	          float b,
-	          float eta,
-	         ) @trusted
+    void play(VoiceStatus status) @trusted
     {
-        _noteOriginal = note;
-        float fundamental = convertMIDINoteToFrequency(note + bend * 12);
+        _noteOriginal = status.note;
+        float fundamental = convertMIDINoteToFrequency(status.note + status.pitchBend * 12);
         foreach (i; 0..N_HARMONICS)
             _osc[i].frequency = fundamental * (i+1);
 
         _isPlaying = true;
-        _volume = velocity / 128.0f;
+        _volume = status.velocity / 128.0f;
 
-        _envelope.trigger(attackTime);
+        _attack.trigger(status.attackTime);
 
-        initLevels(e0, en, _excitation);
-        _solver.nu = nu;
-        _solver.k0 = k0;
-        _solver.lambda = lambda;
-        _solver.alpha = alpha;
-        _solver.beta = beta;
-        _solver.a = a;
-        _solver.b = b;
-        _solver.eta = eta;
+        initLevels(status.e0, status.en, _excitation);
+        _solver.nu = status.nu;
+        _solver.k0 = status.k0;
+        _solver.lambda = status.lambda;
+        _solver.alpha = status.alpha;
+        _solver.beta = status.beta;
+        _solver.a = status.a;
+        _solver.b = status.b;
+        _solver.eta = status.eta;
     }
 
     void release()
     {
-        _isPlaying = false;
+        _release.trigger();
+        _isReleasing = true;
+    }
+
+    void quasiInstantRelease()
+    {
+        _release.trigger(0.001);
+        _isReleasing = true;
     }
 
     void instantRelease()
@@ -220,7 +245,7 @@ public:
 		initOsc(sampleRate);
 		initLevels(0.0, 0.0, 0.0);
 		_solver.delta_t = 1.0/sampleRate;
-        _envelope.reset(sampleRate);
+        _attack.reset(sampleRate);
     }
 
 	void initOsc(float sampleRate)
@@ -238,6 +263,12 @@ public:
 
     float nextSample()
     {
+        if (_isReleasing && !_release.isReleasing)
+        {
+            _isReleasing = false;
+            _isPlaying = false;
+        }
+
         if (!_isPlaying)
             return 0;
 
@@ -246,17 +277,38 @@ public:
         float harmonicSample = 0.0;
         foreach (n; 0..N_HARMONICS)
             harmonicSample += _solver.levels[n+1] * _osc[n].nextSample();
-        return harmonicSample * _volume * _envelope.process();
+        return harmonicSample * _volume * _attack.process();
     }
 
 
 private:
     Oscillator[10] _osc;
     bool _isPlaying;
+    bool _isReleasing;
     int _noteOriginal = -1;
     float _volume = 1.0f;
 
     float _excitation = 1.0f;
     Solver _solver;
-    Envelope _envelope;
+    Attack _attack;
+    Release _release;
+}
+
+struct VoiceStatus
+{
+    int note;
+	int velocity;
+	float pitchBend;
+	float attackTime;
+	float releaseTime;
+	float e0;
+	float en;
+	float nu;
+	float k0;
+	float lambda;
+	float alpha;
+	float beta;
+	float a;
+	float b;
+	float eta;
 }
