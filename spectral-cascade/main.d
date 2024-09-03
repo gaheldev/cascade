@@ -105,7 +105,7 @@ public:
 
         _synth.waveForm = readParam!WaveForm(paramOsc1WaveForm);
         _synth.outputGain = convertDecibelToLinearGain(readParam!float(paramOutputGain));
-        _synth.attack = readParam!float(paramAttack);
+        _synth.attackTime = readParam!float(paramAttack);
         _synth.e0 = readParam!float(paramE0);
         _synth.en = readParam!float(paramEn);
         _synth.nu = readParam!float(paramNu);

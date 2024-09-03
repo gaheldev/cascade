@@ -2,6 +2,7 @@ import std.math;
 import dplug.core;
 
 import oscillator;
+import envelope;
 import solver;
 import config;
 
@@ -50,7 +51,7 @@ public:
         _voices[_roundRobin.next()].play(note,
                                          velocity,
                                          _pitchBend,
-                                         attack,
+                                         attackTime,
                                          e0,
                                          en,
                                          nu,
@@ -117,7 +118,7 @@ public:
     }
 
     float outputGain = 1;
-	float attack = 0.005;
+	float attackTime = 0.005;
 	float e0 = 1.0;
 	float en = 1.0;
 	float nu = 1.0;
@@ -138,6 +139,7 @@ private:
 
     VoiceStatus[voicesCount] _voices;
 }
+
 
 struct VoiceStatus
 {
@@ -168,7 +170,7 @@ public:
     void play(int note,
 	          int velocity,
 	          float bend,
-		      float attack,
+		      float attackTime,
 	          float e0,
 	          float en,
 	          float nu,
@@ -182,24 +184,24 @@ public:
 	         ) @trusted
     {
         _noteOriginal = note;
-		float fundamental = convertMIDINoteToFrequency(note + bend * 12);
-		foreach (i; 0..N_HARMONICS)
-			_osc[i].frequency = fundamental * (i+1);
+        float fundamental = convertMIDINoteToFrequency(note + bend * 12);
+        foreach (i; 0..N_HARMONICS)
+            _osc[i].frequency = fundamental * (i+1);
 
         _isPlaying = true;
         _volume = velocity / 128.0f;
 
-		// TODO: handle attack
+        _envelope.trigger(attackTime);
 
-		initLevels(e0, en, _excitation);
-		_solver.nu = nu;
-		_solver.k0 = k0;
-		_solver.lambda = lambda;
-		_solver.alpha = alpha;
-		_solver.beta = beta;
-		_solver.a = a;
-		_solver.b = b;
-		_solver.eta = eta;
+        initLevels(e0, en, _excitation);
+        _solver.nu = nu;
+        _solver.k0 = k0;
+        _solver.lambda = lambda;
+        _solver.alpha = alpha;
+        _solver.beta = beta;
+        _solver.a = a;
+        _solver.b = b;
+        _solver.eta = eta;
     }
 
     void release()
@@ -218,6 +220,7 @@ public:
 		initOsc(sampleRate);
 		initLevels(0.0, 0.0, 0.0);
 		_solver.delta_t = 1.0/sampleRate;
+        _envelope.reset(sampleRate);
     }
 
 	void initOsc(float sampleRate)
@@ -238,12 +241,12 @@ public:
         if (!_isPlaying)
             return 0;
 
-		_solver.nextStep();
+        _solver.nextStep();
 
-		float harmonicSample = 0.0;
-		foreach (n; 0..N_HARMONICS)
-			harmonicSample += _solver.levels[n+1] * _osc[n].nextSample();
-        return harmonicSample * _volume;
+        float harmonicSample = 0.0;
+        foreach (n; 0..N_HARMONICS)
+            harmonicSample += _solver.levels[n+1] * _osc[n].nextSample();
+        return harmonicSample * _volume * _envelope.process();
     }
 
 
@@ -255,4 +258,5 @@ private:
 
     float _excitation = 1.0f;
     Solver _solver;
+    Envelope _envelope;
 }
