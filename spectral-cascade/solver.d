@@ -7,15 +7,10 @@ import gaussiansampler : TableGaussianGenerator, FastPureRandomGenerator, PureRa
 import config;
 
 
-class Solver
+struct Solver
 {
 @safe pure nothrow @nogc:
 public:
-
-    this()
-    {
-        _rng = TableGaussianGenerator(123456789);
-    }
 
     void excite(float amount)
     {
@@ -185,13 +180,13 @@ private:
 	float m_lambda = 1.5;
 
     // rng
-    TableGaussianGenerator _rng;
+    TableGaussianGenerator!12345 _rng;
     // TODO: check std is correct (delta_t^^0.5 ?)
     float _get_noise_stddev(float delta_t) { return 1.0 / sqrt(delta_t); }
     float _noise_stddev = 1.0 / sqrt(1.0 / 48000.0); // 1 / (delta_t^^0.5)
 
     // caches
-    const int CACHE_SIZE = 2 * N_HARMONICS; // a bit extra space
+    const int CACHE_SIZE = 2 * N_HARMONICS; // a bit of extra space
     float[CACHE_SIZE] c_lambda_pow = -1;
     float[CACHE_SIZE] c_k = -1;
     float[CACHE_SIZE] c_T = -1;

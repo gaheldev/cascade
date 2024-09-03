@@ -81,18 +81,12 @@ struct FastPureRandomGenerator
     }
 }
 
-struct TableGaussianGenerator
+struct TableGaussianGenerator(int seed)
 {
 @safe pure nothrow @nogc:
-    private uint state;
+    private uint state = seed;
     private enum TABLE_SIZE = 256;
-    private immutable float[TABLE_SIZE] gaussianTable;
-
-    this(uint seed) 
-    {
-        state = seed;
-        gaussianTable = generateGaussianTable();
-    }
+    private immutable float[TABLE_SIZE] gaussianTable = generateGaussianTable();
 
     private static float[TABLE_SIZE] generateGaussianTable()
     {

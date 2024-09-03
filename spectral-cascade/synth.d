@@ -1,5 +1,6 @@
 import std.math;
 import dplug.core;
+
 import oscillator;
 import solver;
 import config;
@@ -7,7 +8,7 @@ import config;
 
 struct Synth(size_t voicesCount)
 {
-@safe pure nothrow @nogc:
+nothrow @nogc:
 public:
 
     static assert(voicesCount > 0, "A synth must have at least 1 voice.");
@@ -34,13 +35,14 @@ public:
 
     struct RoundRobin(int numberOfElements)
     {
+        static assert(numberOfElements > 0, "Round robin requires at least 1 element");
         int next()
         {
             current = (current + 1) % numberOfElements;
             return current;
         }
 
-        int current = 0;
+        int current = -1;
     }
 
     void markNoteOn(int note, int velocity)
@@ -139,7 +141,7 @@ private:
 
 struct VoiceStatus
 {
-@safe pure nothrow @nogc:
+nothrow @nogc:
 public:
 
     bool isPlaying()
@@ -251,6 +253,6 @@ private:
     int _noteOriginal = -1;
     float _volume = 1.0f;
 
-	float _excitation = 1.0f;
-	Solver _solver = new Solver();
+    float _excitation = 1.0f;
+    Solver _solver;
 }
