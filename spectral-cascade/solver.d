@@ -37,7 +37,6 @@ public:
         if (n==0 || n==_N) return levels[n];
         if (levels[n] <= DENORMAL) return 0.0;
 
-        // TODO: stop processing below a small value and return 0
         float e = levels[n] + delta_t * (  dissipation(n)
                                          + T(n)
                                          - T(n+1)

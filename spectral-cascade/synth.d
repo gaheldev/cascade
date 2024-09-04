@@ -3,7 +3,7 @@ import dplug.core;
 
 import oscillator;
 import voice;
-import roundrobin;
+import queues;
 import envelope;
 import config;
 
