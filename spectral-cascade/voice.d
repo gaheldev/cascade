@@ -128,8 +128,8 @@ public:
         if (_release.isReleased)
             stop();
 
-        /* if (!_solver.isProcessing) */
-        /*     stop(); */
+        if (!_solver.isProcessing)
+            stop();
 
         if (!isPlaying)
             return 0;
