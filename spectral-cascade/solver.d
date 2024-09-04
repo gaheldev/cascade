@@ -25,6 +25,12 @@ public:
             _newLevels[n] = nextLevel(n);
         levels = _newLevels;
     }
+
+    bool isProcessing()
+    {
+        // if first energy level is 0 then everything should be 0 and cannot increase again
+        return levels[1] > DENORMAL;
+    }
 	
     float nextLevel(int n)
     {

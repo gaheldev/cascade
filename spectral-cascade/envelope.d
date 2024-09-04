@@ -24,6 +24,14 @@ public:
         _isAttacking = false;
     }
 
+    /// prepare the enveloppe to be triggered again
+    void rearm()
+    {
+        _isAttacking = false;
+        _currentLevel = 0.0f;
+    }
+
+
     void trigger(float attackTime)
     {
         this.attackTime = attackTime;
@@ -67,6 +75,8 @@ nothrow @nogc:
 public:
     bool isReleasing = false;
 
+    bool isReleased() { return _currentLevel == 0.0f; }
+
     @property float releaseTime() { return m_releaseTime; }
     @property float releaseTime(float releaseTime)
     {
@@ -83,6 +93,14 @@ public:
         _sampleRate = sampleRate;
         releaseTime = 0.0f;
         isReleasing = false;
+        _currentLevel = 1.0f;
+    }
+
+    /// prepare the enveloppe to be triggered again
+    void rearm()
+    {
+        isReleasing = false;
+        _currentLevel = 1.0f;
     }
 
     void trigger(float releaseTime)
@@ -93,7 +111,6 @@ public:
 
     void trigger()
     {
-        _currentLevel = 1.0f;
         isReleasing = true;
     }
 
@@ -117,4 +134,51 @@ private:
     float m_releaseTime = 0.0f;
     float _currentLevel = 1.0f;
     float _releaseRate = 0.0f;
+}
+
+unittest
+{
+    Release r;
+
+    assert(!r.isReleasing);
+    assert(!r.isReleased);
+
+    r.reset(3);
+    assert(!r.isReleasing);
+    assert(!r.isReleased);
+
+    r.trigger(1);
+    assert(r.isReleasing);
+    assert(!r.isReleased);
+
+    r.process();
+    assert(r.isReleasing);
+    assert(!r.isReleased);
+
+    r.trigger(1);
+    assert(r.isReleasing);
+    assert(!r.isReleased);
+
+    r.process(); // extra process to make sure it's over despite rounding
+    assert(r.process() == 0);
+    assert(!r.isReleasing);
+    assert(r.isReleased);
+
+    r.reset(2);
+    assert(!r.isReleasing);
+    assert(!r.isReleased);
+
+    r.trigger(1);
+    assert(r.isReleasing);
+    assert(!r.isReleased);
+
+    assert(r.process() > 0);
+    assert(r.isReleasing);
+    assert(!r.isReleased);
+
+    r.process(); // extra process to make sure it's over despite rounding
+    assert(r.process() == 0);
+    assert(!r.isReleasing);
+    assert(r.isReleased);
+
 }

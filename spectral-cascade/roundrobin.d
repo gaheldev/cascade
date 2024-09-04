@@ -3,14 +3,19 @@
 struct RoundRobin(int numberOfElements)
 {
 public:
+
     static assert(numberOfElements > 0, "Round robin requires at least 1 element");
     
     /// Return an avaiblable element if possible
     /// If non is available, returns oldest element that was returned
     int next()
     {
-        current = _getLessBusy();
-        return current;
+        return _getLessBusy();
+    }
+
+    void reset()
+    {
+        _busyness = 0;
     }
 
     void markBusy(int i)
@@ -33,9 +38,6 @@ public:
     {
         _busyness[i] = 0.5;
     }
-
-    int current = -1;
-
 
 private:
 
@@ -62,6 +64,22 @@ private:
     }
 }
 
+unittest
+{
+    RoundRobin!3 r;
+    r.markBusy(0);
+    r.markBusy(1);
+    assert(r.next == 2);
+
+    r.markBusy(2);
+
+    r.markFreeing(1);
+    assert(r.next == 1);
+
+    r.markFree(0);
+    assert(r.next == 0);
+}
+
 
 struct Queue(T, size_t N)
 {
@@ -69,26 +87,35 @@ nothrow @nogc:
 public:
     static assert(N > 0, "Queue must have a size > 0");
 
-    bool empty() const
+    void empty()
+    {
+        if (isEmpty) return;
+        front = 0;
+        length = 0;
+    }
+
+    bool isEmpty() const
     {
         return length == 0;
     }
 
-    bool full() const
+    bool isFull() const
     {
         return length == N;
     }
 
+    /// Does nothing if queue is full
     void push(T item)
-    in (!full)
     {
+        if (isFull) return;
         size_t back = (front + length) % N;
         data[back] = item;
         length++;
     }
 
+    /// fails if queue is empty
     T pop()
-    in (!empty)
+    in (!isEmpty, "Queue is empty, cannot pop a value")
     {
         T item = data[front];
         front = (front + 1) % N;
@@ -96,8 +123,9 @@ public:
         return item;
     }
 
+    /// fails if queue is empty
     T peek() const
-    in (!empty)
+    in (!isEmpty, "Queue is empty, cannot pop a value")
     {
         return data[front];
     }
@@ -121,24 +149,24 @@ private:
 }
 
 
-// Unit tests
 unittest
 {
     // Test queue of integers
     {
         Queue!(int, 3) q;
 
-        assert(q.empty);
-        assert(!q.full);
+        assert(q.isEmpty);
+        assert(!q.isFull);
         assert(q.capacity == 3);
         assert(q.size == 0);
 
         q.push(1);
+        assert(!q.isEmpty);
+
         q.push(2);
         q.push(3);
 
-        assert(!q.empty);
-        assert(q.full);
+        assert(q.isFull);
         assert(q.size == 3);
 
         assert(q.peek == 1);
@@ -146,13 +174,13 @@ unittest
         assert(q.size == 2);
 
         q.push(4);
-        assert(q.full);
+        assert(q.isFull);
 
         assert(q.pop == 2);
         assert(q.pop == 3);
         assert(q.pop == 4);
 
-        assert(q.empty);
+        assert(q.isEmpty);
     }
 
     // Test queue of strings
@@ -164,11 +192,11 @@ unittest
         assert(q.size == 1);
 
         q.push("world");
-        assert(q.full);
+        assert(q.isFull);
 
         assert(q.pop == "hello");
         assert(q.pop == "world");
-        assert(q.empty);
+        assert(q.isEmpty);
     }
 
     // Test circular behavior
@@ -183,6 +211,21 @@ unittest
         assert(q.pop == 2);
         assert(q.pop == 3);
         assert(q.pop == 4);
-        assert(q.empty);
+        assert(q.isEmpty);
+    }
+
+    // Test overflow
+    {
+        Queue!(int, 2) q;
+
+        assert(q.isEmpty);
+        q.push(1);
+        q.push(2);
+        assert(q.isFull);
+
+        // push should do nothing
+        q.push(3);
+        assert(q.pop == 1);
+        assert(q.pop == 2);
     }
 }
