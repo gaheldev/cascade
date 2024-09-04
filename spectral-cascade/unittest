@@ -1,0 +1,9 @@
+#!/bin/bash
+
+mkdir -p unittests/
+
+src=$1
+name=${src%.*}
+
+rdmd -cov -unittest -main "${src}"
+mv ${name}.lst unittests/

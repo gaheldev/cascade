@@ -1,4 +1,5 @@
 builds/
+unittests/
 dub.selections.json
 
 # only consider .d files in tests/
