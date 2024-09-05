@@ -61,7 +61,7 @@ public:
         _attackTime = status.attackTime;
         _releaseTime = status.releaseTime;
 
-        _solverIntp.initLevels(status.e0, status.en, _excitation);
+        _solverIntp.initLevels(status.e0, status.en, status.excitation);
         _solverIntp.setParams(status);
 
         attack();
@@ -166,6 +166,7 @@ struct SolverInterpolator
 {
 nothrow @nogc:
 public:
+    bool interpolate = true;
 
     @property float sampleRate() { return m_sampleRate; }
     @property float sampleRate(float value)
@@ -187,6 +188,7 @@ public:
 
     void setParams(VoiceStatus status)
     {
+        interpolate = status.interpolate;
         _solver.nu = status.nu;
         _solver.k0 = status.k0;
         _solver.lambda = status.lambda;
@@ -204,6 +206,8 @@ public:
 
     void prepareBuffer(int frames)
     {
+        if (!interpolate) return;
+
         // get last buffer level
         _oldLevels = _solver.levels;
 
@@ -218,8 +222,17 @@ public:
 
     void process()
     {
-        _step += 1;
-        _interpolate(_step);
+        if (interpolate)
+        {
+            _step += 1;
+            _interpolate(_step);
+        }
+        else
+        {
+            _solver.delta_t = 1.0 / sampleRate;
+            _solver.nextStep();
+            _levels = _solver.levels;
+        }
     }
 
 
@@ -246,20 +259,22 @@ private:
 struct VoiceStatus
 {
     int note;
-	int velocity;
-	float pitchBend;
-	float attackTime;
-	float releaseTime;
-	float e0;
-	float en;
-	float nu;
-	float k0;
-	float lambda;
-	float alpha;
-	float beta;
-	float a;
-	float b;
-	float eta;
+    int velocity;
+    float pitchBend;
+    float attackTime;
+    float releaseTime;
+    bool interpolate;
+    float e0;
+    float en;
+    float excitation;
+    float nu;
+    float k0;
+    float lambda;
+    float alpha;
+    float beta;
+    float a;
+    float b;
+    float eta;
 }
 
     

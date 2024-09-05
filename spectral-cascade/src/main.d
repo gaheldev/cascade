@@ -21,18 +21,20 @@ enum : int
     paramPanic,
     paramOsc1WaveForm,
     paramOutputGain,
-	paramAttack,
-	paramRelease,
-	paramE0,
-	paramEn,
-	paramNu,
-	paramK0,
-	paramLambda,
-	paramAlpha,
-	paramBeta,
-	paramA,
-	paramB,
-	paramEta,
+    paramAttack,
+    paramRelease,
+    paramInterpolate,
+    paramE0,
+    paramEn,
+    paramExcitation,
+    paramNu,
+    paramK0,
+    paramLambda,
+    paramAlpha,
+    paramBeta,
+    paramA,
+    paramB,
+    paramEta,
 }
 
 static immutable waveFormNames = [__traits(allMembers, WaveForm)];
@@ -69,8 +71,10 @@ public:
 
         params ~= mallocNew!LinearFloatParameter(paramAttack, "Attack", "s", 0.0, 1.0, 0.01);
         params ~= mallocNew!LinearFloatParameter(paramRelease, "Release", "s", 0.0, 5.0, 1.000);
+        params ~= mallocNew!BoolParameter(paramInterpolate, "Interpolate", true);
         params ~= mallocNew!LinearFloatParameter(paramE0, "E0", "", 0.0, 1.0, 1.0);
         params ~= mallocNew!LinearFloatParameter(paramEn, "En", "", 0.0, 1.0, 1.0);
+        params ~= mallocNew!LinearFloatParameter(paramExcitation, "Excitation", "", 0.0, 1.0, 1.0);
         params ~= mallocNew!LinearFloatParameter(paramNu, "nu", "", 0.0, 1.0, 1.0);
         params ~= mallocNew!LinearFloatParameter(paramK0, "k0", "", 0.0, 10.0, 1.0);
         params ~= mallocNew!LinearFloatParameter(paramLambda, "lambda", "", 1.0 + float.min_normal, 3.0, 1.5);
@@ -109,8 +113,10 @@ public:
         _synth.outputGain = convertDecibelToLinearGain(readParam!float(paramOutputGain));
         _synth.attackTime = readParam!float(paramAttack);
         _synth.releaseTime = readParam!float(paramRelease);
+        _synth.interpolate = readParam!bool(paramInterpolate);
         _synth.e0 = readParam!float(paramE0);
         _synth.en = readParam!float(paramEn);
+        _synth.excitation = readParam!float(paramExcitation);
         _synth.nu = readParam!float(paramNu);
         _synth.k0 = readParam!float(paramK0);
         _synth.lambda = readParam!float(paramLambda);

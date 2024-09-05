@@ -45,8 +45,10 @@ public:
         status.pitchBend = _pitchBend;
         status.attackTime = attackTime;
         status.releaseTime = releaseTime;
+        status.interpolate = interpolate;
         status.e0 = e0;
         status.en = en;
+        status.excitation = excitation;
         status.nu = nu;
         status.k0 = k0;
         status.lambda = lambda;
@@ -174,18 +176,20 @@ public:
     }
 
     float outputGain = 1;
-	float attackTime = 0.01;
-	float releaseTime = 1;
-	float e0 = 1.0;
-	float en = 1.0;
-	float nu = 1.0;
-	float k0 = 1.0;
-	float lambda = 1.5;
-	float alpha = 0.1;
-	float beta = 0.9;
-	float a = 1.0;
-	float b = 1.0;
-	float eta = 1.0;
+    float attackTime = 0.01;
+    float releaseTime = 1;
+    bool interpolate = true;
+    float e0 = 1.0;
+    float en = 1.0;
+    float excitation = 1.0;
+    float nu = 1.0;
+    float k0 = 1.0;
+    float lambda = 1.5;
+    float alpha = 0.1;
+    float beta = 0.9;
+    float a = 1.0;
+    float b = 1.0;
+    float eta = 1.0;
 
 private:
     enum double _internalGain = (1.0 / (voicesCount / SQRT1_2));
