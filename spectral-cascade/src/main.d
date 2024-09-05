@@ -136,6 +136,7 @@ public:
                 _synth.setPitchBend(msg.pitchBend());
         }
 
+        _synth.prepareBuffer(frames);
         foreach (ref sample; outputs[0][0 .. frames])
             sample = _synth.nextSample();
 

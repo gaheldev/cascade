@@ -18,6 +18,13 @@ public:
             levels[n] = amount;
     }
 
+    void processBuffer(float*[] outputs, int frames)
+    {
+        // compute next level for last frame
+
+        // interpolate values between previous frame and last frame
+    }
+
     void nextStep()
     {
         _reset_cache(c_T);
@@ -31,7 +38,7 @@ public:
         // if first energy level is 0 then everything should be 0 and cannot increase again
         return levels[1] > DENORMAL;
     }
-	
+
     float nextLevel(int n)
     {
         if (n==0 || n==_N) return levels[n];

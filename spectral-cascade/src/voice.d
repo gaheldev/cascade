@@ -16,7 +16,7 @@ public:
 
     void stop()
     {
-        initLevels(0.0, 0.0, 0.0);
+        _solverIntp.initLevels(0.0, 0.0, 0.0);
         _attack.rearm();
         _release.rearm();
         _isPlaying = false;
@@ -61,15 +61,8 @@ public:
         _attackTime = status.attackTime;
         _releaseTime = status.releaseTime;
 
-        initLevels(status.e0, status.en, _excitation);
-        _solver.nu = status.nu;
-        _solver.k0 = status.k0;
-        _solver.lambda = status.lambda;
-        _solver.alpha = status.alpha;
-        _solver.beta = status.beta;
-        _solver.a = status.a;
-        _solver.b = status.b;
-        _solver.eta = status.eta;
+        _solverIntp.initLevels(status.e0, status.en, _excitation);
+        _solverIntp.setParams(status);
 
         attack();
         _isPlaying = true;
@@ -107,9 +100,9 @@ public:
     void reset(float sampleRate)
     {
         instantRelease();
-		initOsc(sampleRate);
-		initLevels(0.0, 0.0, 0.0);
-		_solver.delta_t = 1.0/sampleRate;
+        initOsc(sampleRate);
+        _solverIntp.initLevels(0.0, 0.0, 0.0);
+        _solverIntp.sampleRate = sampleRate;
         _attack.reset(sampleRate);
         _release.reset(sampleRate);
         _isReleasingQuickly = false;
@@ -121,29 +114,27 @@ public:
 			osc.sampleRate = sampleRate;
 	}
 
-	void initLevels(float e0, float en, float exciteAmount)
-	{
-        _solver.levels[0] = e0;
-        _solver.levels[$-1] = en;
-        _solver.excite(exciteAmount);
-	}
+    void prepareBuffer(int frames)
+    {
+        _solverIntp.prepareBuffer(frames);
+    }
 
     float nextSample()
     {
         if (_release.isReleased)
             stop();
 
-        if (!_solver.isProcessing)
+        if (!_solverIntp.isProcessing)
             stop();
 
         if (!isPlaying)
             return 0;
 
-        _solver.nextStep();
+        _solverIntp.process();
 
         float harmonicSample = 0.0;
         foreach (n; 0..N_HARMONICS)
-            harmonicSample += _solver.levels[n+1] * _osc[n].nextSample();
+            harmonicSample += _solverIntp.level(n) * _osc[n].nextSample();
         harmonicSample *= _volume;
         harmonicSample *= _attack.process();
         harmonicSample *= _release.process();
@@ -163,12 +154,94 @@ private:
     float _volume = 1.0f;
     float _excitation = 1.0f;
 
-    Solver _solver;
+    SolverInterpolator _solverIntp;
     Attack _attack;
     Release _release;
     float _attackTime;
     float _releaseTime;
 }
+
+
+struct SolverInterpolator
+{
+nothrow @nogc:
+public:
+
+    @property float sampleRate() { return m_sampleRate; }
+    @property float sampleRate(float value)
+    {
+        m_sampleRate = value;
+        _solver.delta_t = 1.0f / sampleRate;
+        return m_sampleRate;
+    }
+
+    bool isProcessing() { return _solver.isProcessing; }
+
+	void initLevels(float e0, float en, float exciteAmount)
+	{
+        _solver.levels[0] = e0;
+        _solver.levels[$-1] = en;
+        _solver.excite(exciteAmount);
+        _oldLevels = _solver.levels;
+	}
+
+    void setParams(VoiceStatus status)
+    {
+        _solver.nu = status.nu;
+        _solver.k0 = status.k0;
+        _solver.lambda = status.lambda;
+        _solver.alpha = status.alpha;
+        _solver.beta = status.beta;
+        _solver.a = status.a;
+        _solver.b = status.b;
+        _solver.eta = status.eta;
+    }
+
+    float level(int n)
+    {
+        return _levels[n+1];
+    }
+
+    void prepareBuffer(int frames)
+    {
+        // get last buffer level
+        _oldLevels = _solver.levels;
+
+        // compute next level for last frame
+        _solver.delta_t = frames / sampleRate;
+        _solver.nextStep();
+        _nextLevels = _solver.levels;
+
+        _framesToInterpolate = frames;
+        _step = 0;
+    }
+
+    void process()
+    {
+        _step += 1;
+        _interpolate(_step);
+    }
+
+
+private:
+    Solver _solver;
+    float m_sampleRate = 48000;
+    int _framesToInterpolate = 1;
+    int _step = 0;
+
+    float[N_HARMONICS+2] _levels;
+    float[N_HARMONICS+2] _nextLevels;
+    float[N_HARMONICS+2] _oldLevels;
+
+    void _interpolate(int step)
+    {
+        float weight = step / _framesToInterpolate;
+        foreach (i; 1..cast(int) (_levels.length - 1))
+            _levels[i] = weight * _nextLevels[i] + (1 - weight) * _oldLevels[i];
+
+    }
+}
+
 
 struct VoiceStatus
 {

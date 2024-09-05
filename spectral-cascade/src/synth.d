@@ -141,6 +141,12 @@ public:
         }
     }
 
+    void prepareBuffer(int frames)
+    {
+        foreach (ref v; _voices)
+            v.prepareBuffer(frames);
+    }
+
     float nextSample()
     {
         if (panic) return 0;
