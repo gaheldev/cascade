@@ -28,6 +28,11 @@ public:
         return isPlaying && _release.isReleasing;
     }
 
+    bool isReleasingQuickly()
+    {
+        return isReleasing && _isReleasingQuickly;
+    }
+
     int noteWithoutBend()
     {
         return _noteOriginal;
@@ -152,7 +157,7 @@ public:
 
 private:
     Oscillator[10] _osc;
-    bool _isPlaying;
+    bool _isPlaying = false;
     bool _isReleasingQuickly = false;
     int _noteOriginal = -1;
     float _volume = 1.0f;

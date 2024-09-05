@@ -61,10 +61,9 @@ public:
 
     void markNoteOff(int note)
     {
-        // let the solver control the release
-        /* foreach (ref v; _voices) */
-        /*     if (v.isPlaying && v.noteWithoutBend == note) */
-        /*         v.release(); */
+        foreach (ref v; _voices)
+            if (v.isPlaying && v.noteWithoutBend == note)
+                v.release();
     }
 
     void markAllNotesOff()
@@ -101,8 +100,10 @@ public:
         {
             if (!_voices[i].isPlaying)
                 _roundRobin.markFree(i);
-            else if (_voices[i].isReleasing)
+            else if (_voices[i].isReleasingQuickly)
                 _roundRobin.markFreeing(i);
+            else if (_voices[i].isReleasing)
+                _roundRobin.markSlowlyFreeing(i);
         }
     }
 
@@ -118,13 +119,13 @@ public:
             int scheduled = scheduledVoices[i];
             auto v = &_voices[scheduled];
 
-            if (v.isPlaying && !v.isReleasing)
+            if (v.isPlaying && !v.isReleasingQuickly)
             {
                 v.quasiInstantRelease();
                 _roundRobin.markFreeing(scheduled);
             }
 
-            if (v.isPlaying && v.isReleasing)
+            if (v.isPlaying && v.isReleasingQuickly)
             {
                 // wait for this voice or another one
                 // to be fully released
@@ -167,7 +168,7 @@ public:
     }
 
     float outputGain = 1;
-	float attackTime = 0.005;
+	float attackTime = 0.01;
 	float releaseTime = 1;
 	float e0 = 1.0;
 	float en = 1.0;

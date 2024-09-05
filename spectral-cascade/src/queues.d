@@ -47,6 +47,11 @@ public:
         _busyness[i] = 0.5;
     }
 
+    void markSlowlyFreeing(int i)
+    {
+        _busyness[i] = 0.7;
+    }
+
 private:
 
     // 0   : free

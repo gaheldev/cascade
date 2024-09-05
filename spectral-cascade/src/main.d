@@ -22,6 +22,7 @@ enum : int
     paramOsc1WaveForm,
     paramOutputGain,
 	paramAttack,
+	paramRelease,
 	paramE0,
 	paramEn,
 	paramNu,
@@ -66,7 +67,8 @@ public:
         params ~= mallocNew!EnumParameter(paramOsc1WaveForm, "Waveform", waveFormNames, WaveForm.init);
         params ~= mallocNew!GainParameter(paramOutputGain, "Output Gain", 6.0, 0.0);
 
-        params ~= mallocNew!LinearFloatParameter(paramAttack, "Attack", "s", 0.0, 0.2, 0.005);
+        params ~= mallocNew!LinearFloatParameter(paramAttack, "Attack", "s", 0.0, 1.0, 0.01);
+        params ~= mallocNew!LinearFloatParameter(paramRelease, "Release", "s", 0.0, 5.0, 1.000);
         params ~= mallocNew!LinearFloatParameter(paramE0, "E0", "", 0.0, 1.0, 1.0);
         params ~= mallocNew!LinearFloatParameter(paramEn, "En", "", 0.0, 1.0, 1.0);
         params ~= mallocNew!LinearFloatParameter(paramNu, "nu", "", 0.0, 1.0, 1.0);
@@ -106,6 +108,7 @@ public:
         _synth.waveForm = readParam!WaveForm(paramOsc1WaveForm);
         _synth.outputGain = convertDecibelToLinearGain(readParam!float(paramOutputGain));
         _synth.attackTime = readParam!float(paramAttack);
+        _synth.releaseTime = readParam!float(paramRelease);
         _synth.e0 = readParam!float(paramE0);
         _synth.en = readParam!float(paramEn);
         _synth.nu = readParam!float(paramNu);
