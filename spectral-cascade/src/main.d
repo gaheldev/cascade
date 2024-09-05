@@ -142,9 +142,17 @@ public:
                 _synth.setPitchBend(msg.pitchBend());
         }
 
-        _synth.prepareBuffer(frames);
-        foreach (ref sample; outputs[0][0 .. frames])
-            sample = _synth.nextSample();
+        if (_synth.isPlaying)
+        {
+            _synth.prepareBuffer(frames);
+            foreach (ref sample; outputs[0][0 .. frames])
+                sample = _synth.nextSample();
+        }
+        else
+        {
+            outputs[0][0 .. frames] = 0;
+        }
+
 
         // Copy output to every channel
         foreach (chan; 1 .. outputs.length)

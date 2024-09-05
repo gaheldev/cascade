@@ -15,7 +15,9 @@ public:
 
     static assert(voicesCount > 0, "A synth must have at least 1 voice.");
 
-    bool isPlaying()
+    bool isPlaying = false;
+
+    bool anyVoicePlaying()
     {
         foreach (v; _voices)
             if (v.isPlaying)
@@ -38,6 +40,8 @@ public:
     void markNoteOn(int note, int velocity)
     {
         if (panic) return;
+
+        isPlaying = true;
 
         VoiceStatus status;
         status.note = note;
@@ -155,6 +159,9 @@ public:
 
         updateRoundRobin();
         handleVoiceQueue();
+
+        if (!anyVoicePlaying())
+            isPlaying = false;
 
         double sample = 0;
 
