@@ -1,8 +1,8 @@
 {
     "name": "cascade-spectral-synth",
 
-    "importPaths": [ "." ],
-    "sourcePaths": [ "." ],
+    "importPaths": [ "src/" ],
+    "sourcePaths": [ "src/" ],
     "stringImportPaths": [ "." ],
 
     "targetType": "dynamicLibrary",

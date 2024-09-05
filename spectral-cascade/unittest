@@ -6,4 +6,5 @@ src=$1
 name=${src%.*}
 
 rdmd -cov -unittest -main "${src}"
-mv ${name}.lst unittests/
+outname=`echo ${name}.lst | tr / -`
+mv ${outname} unittests/`basename $name`.lst
