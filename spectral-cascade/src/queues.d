@@ -1,3 +1,4 @@
+import std.algorithm.sorting : sort;
 
 
 struct RoundRobin(int numberOfElements)
@@ -11,6 +12,13 @@ public:
     int next()
     {
         return _getLessBusy();
+    }
+
+    int[numberOfElements] scheduled()
+    {
+        _initIndexes();
+        sort!((a, b) => _busyness[a] < _busyness[b])(_indexes[]);
+        return _indexes;
     }
 
     void reset()
@@ -45,6 +53,7 @@ private:
     // 0.5 : freeing
     // >=1 : busy ponderation
     float[numberOfElements] _busyness = 0;
+    int[numberOfElements] _indexes;
 
     int _getLessBusy()
     {
@@ -62,6 +71,12 @@ private:
         }
         return minIndex;
     }
+
+    void _initIndexes()
+    {
+        foreach (i; 0..numberOfElements)
+            _indexes[i] = i;
+    }
 }
 
 unittest
@@ -70,14 +85,18 @@ unittest
     r.markBusy(0);
     r.markBusy(1);
     assert(r.next == 2);
+    assert(r.scheduled == [2,0,1]);
 
     r.markBusy(2);
+    assert(r.scheduled == [0,1,2]);
 
     r.markFreeing(1);
     assert(r.next == 1);
+    assert(r.scheduled == [1,0,2]);
 
     r.markFree(0);
     assert(r.next == 0);
+    assert(r.scheduled == [0,1,2]);
 }
 
 
@@ -90,36 +109,36 @@ public:
     void empty()
     {
         if (isEmpty) return;
-        front = 0;
-        length = 0;
+        _front = 0;
+        _length = 0;
     }
 
     bool isEmpty() const
     {
-        return length == 0;
+        return _length == 0;
     }
 
     bool isFull() const
     {
-        return length == N;
+        return _length == N;
     }
 
     /// Does nothing if queue is full
     void push(T item)
     {
         if (isFull) return;
-        size_t back = (front + length) % N;
+        size_t back = (_front + _length) % N;
         data[back] = item;
-        length++;
+        _length++;
     }
 
     /// fails if queue is empty
     T pop()
     in (!isEmpty, "Queue is empty, cannot pop a value")
     {
-        T item = data[front];
-        front = (front + 1) % N;
-        length--;
+        T item = data[_front];
+        _front = (_front + 1) % N;
+        _length--;
         return item;
     }
 
@@ -127,7 +146,7 @@ public:
     T peek() const
     in (!isEmpty, "Queue is empty, cannot pop a value")
     {
-        return data[front];
+        return data[_front];
     }
 
     size_t capacity() const
@@ -135,16 +154,16 @@ public:
         return N;
     }
 
-    size_t size() const
+    size_t length() const
     {
-        return length;
+        return _length;
     }
 
 private:
 
     T[N] data;
-    size_t front = 0;
-    size_t length = 0;
+    size_t _front = 0;
+    size_t _length = 0;
 
 }
 

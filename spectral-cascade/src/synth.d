@@ -112,28 +112,31 @@ public:
         if (_voiceQueue.isEmpty)
             return;
 
-        // TODO: handle multiple notes at once
-        //       for that next(3) should return the 3 next
-        auto nextVoice = _roundRobin.next;
-        auto v = &_voices[nextVoice];
-        if (v.isPlaying && !v.isReleasing)
+        auto scheduledVoices = _roundRobin.scheduled;
+        foreach (i; 0..cast(int) _voiceQueue.length)
         {
-            v.quasiInstantRelease();
-            _roundRobin.markFreeing(nextVoice);
-        }
+            int scheduled = scheduledVoices[i];
+            auto v = &_voices[scheduled];
 
-        if (v.isPlaying && v.isReleasing)
-        {
-            // wait for this voice or another one
-            // to be fully released
-        }
+            if (v.isPlaying && !v.isReleasing)
+            {
+                v.quasiInstantRelease();
+                _roundRobin.markFreeing(scheduled);
+            }
 
-        if (!v.isPlaying)
-        {
-            // note: here pitch bend only applied at start of note,
-            // and not updated later.
-            v.play(_voiceQueue.pop());
-            _roundRobin.markBusy(nextVoice);
+            if (v.isPlaying && v.isReleasing)
+            {
+                // wait for this voice or another one
+                // to be fully released
+            }
+
+            if (!v.isPlaying)
+            {
+                // note: here pitch bend only applied at start of note,
+                // and not updated later.
+                v.play(_voiceQueue.pop());
+                _roundRobin.markBusy(scheduled);
+            }
         }
     }
 
