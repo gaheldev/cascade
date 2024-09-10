@@ -1,4 +1,5 @@
 import std.math;
+import std.algorithm : min;
 import dplug.core;
 
 import oscillator;
@@ -94,15 +95,39 @@ public:
         return _panic = value;
     }
 
+    @property int activeVoices() { return _activeVoices; }
+    @property int activeVoices(int value)
+    {
+        if (value < _activeVoices)
+        {
+            // reset higher voices
+            foreach (i; value..cast(int) _voices.length)
+            {
+                _voices[i].instantRelease();
+            }
+        }
+
+        if (value != _activeVoices)
+        {
+            _voiceQueue.empty();
+            _roundRobin.reset();
+            _roundRobin.maxElt = value;
+        }
+        return _activeVoices = value;
+    }
+
     void reset(float sampleRate)
     {
         foreach (ref v; _voices)
             v.reset(sampleRate);
+
+        _voiceQueue.empty();
+        _roundRobin.reset();
     }
 
     void updateRoundRobin()
     {
-        foreach (i; 0..cast(int)_voices.length)
+        foreach (i; 0.._activeVoices)
         {
             if (!_voices[i].isPlaying)
                 _roundRobin.markFree(i);
@@ -120,7 +145,8 @@ public:
             return;
 
         auto scheduledVoices = _roundRobin.scheduled;
-        foreach (i; 0..cast(int) _voiceQueue.length)
+        int n = min(_voiceQueue.length, _activeVoices);
+        foreach (i; 0..n)
         {
             int scheduled = scheduledVoices[i];
             auto v = &_voices[scheduled];
@@ -202,6 +228,7 @@ private:
     enum double _internalGain = (1.0 / (voicesCount / SQRT1_2));
     RoundRobin!voicesCount _roundRobin;
     bool _panic = false;
+    int _activeVoices;
 
     float _pitchBend = 0.0f; // -1 to 1, change one semitone
 

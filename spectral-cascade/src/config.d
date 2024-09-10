@@ -4,4 +4,4 @@ const float DENORMAL = 0.0001;
 
 
 /// Number of max notes playing at the same time
-enum N_VOICES = 12;
+const int N_VOICES = 12; // at least 4

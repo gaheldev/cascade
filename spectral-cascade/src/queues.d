@@ -1,4 +1,5 @@
 import std.algorithm.sorting : sort;
+import std.algorithm : min, max;
 
 
 struct RoundRobin(int numberOfElements)
@@ -6,6 +7,15 @@ struct RoundRobin(int numberOfElements)
 public:
 
     static assert(numberOfElements > 0, "Round robin requires at least 1 element");
+
+    /// max number of elements actually used in RoundRobin;
+    @property int maxElt() { return _maxElt; }
+    @property int maxElt(int value)
+    {
+        _maxElt = min(value, numberOfElements);
+        _maxElt = max(_maxElt, 0);
+        return _maxElt;
+    }
     
     /// Return an avaiblable element if possible
     /// If non is available, returns oldest element that was returned
@@ -14,27 +24,53 @@ public:
         return _getLessBusy();
     }
 
+
+    void bubbleSort(ref int[numberOfElements] a)
+    {
+        foreach (i; 0..maxElt-1)
+        {
+            foreach (j; 0..maxElt-i-1)
+            {
+                if (_busyness[a[j]] > _busyness[a[j+1]])
+                {
+                    int tmp = a[j];
+                    a[j] = a[j+1];
+                    a[j+1] = tmp;
+                }
+            }
+        }
+    }
+
     int[numberOfElements] scheduled()
     {
-        _initIndexes();
-        sort!((a, b) => _busyness[a] < _busyness[b])(_indexes[]);
-        return _indexes;
+        bool _sort_function(int a, int b)
+        {
+            if (a >= maxElt && b < maxElt)
+                return false;
+            else if (a < maxElt && b >= maxElt)
+                return true;
+            else
+                return _busyness[a] < _busyness[b];
+        }
+
+        int[numberOfElements] idx;
+        foreach (i; 0..idx.length)
+            idx[i] = _indexes[i];
+
+        /* sort!(_sort_function)(idx[]); */
+        bubbleSort(idx);
+        return idx;
     }
 
     void reset()
     {
         _busyness = 0;
+        _initIndexes();
     }
 
     void markBusy(int i)
     {
-        _busyness[i] += numberOfElements;
-
-        foreach (n; 0..numberOfElements)
-        {
-            if (_busyness[n] > 1)
-                _busyness[n] -= 1;
-        }
+        _updateBusyness(i, 1, float.infinity, 1);
     }
 
     void markFree(int i)
@@ -44,27 +80,41 @@ public:
 
     void markFreeing(int i)
     {
-        _busyness[i] = 0.5;
+        _updateBusyness(i, 0.1, 0.5, 0.01);
     }
 
+    // Weight elements from first freeing to last freeing
     void markSlowlyFreeing(int i)
     {
-        _busyness[i] = 0.7;
+        _updateBusyness(i, 0.5, 1, 0.01);
     }
 
 private:
 
-    // 0   : free
-    // 0.5 : freeing
-    // >=1 : busy ponderation
+    // 0      : free
+    // >= 0.1 : freeing
+    // >= 0.5 : slowly freeing
+    // >= 1   : busy ponderation
     float[numberOfElements] _busyness = 0;
     int[numberOfElements] _indexes;
+    int _maxElt = numberOfElements;
+
+    void _updateBusyness(int i, float floor, float ceil, float step)
+    {
+        assert((floor + maxElt * step) < ceil);
+        foreach (n; 0..maxElt)
+        {
+            if (_busyness[n] > floor && _busyness[n] < ceil)
+                _busyness[n] -= step;
+        }
+        _busyness[i] = floor + maxElt * step;
+    }
 
     int _getLessBusy()
     {
-        float min = numberOfElements;
+        float min = float.infinity;
         int minIndex = -1;
-        foreach (i; 0..numberOfElements)
+        foreach (i; 0..maxElt)
         {
             if (_busyness[i] == 0)
                 return i;
@@ -84,24 +134,129 @@ private:
     }
 }
 
+// Test RoundRobin
 unittest
 {
+    import std.stdio;
     RoundRobin!3 r;
-    r.markBusy(0);
-    r.markBusy(1);
-    assert(r.next == 2);
-    assert(r.scheduled == [2,0,1]);
 
-    r.markBusy(2);
-    assert(r.scheduled == [0,1,2]);
+    // Test Busy
+    {
+        r.reset();
+        r.markBusy(0);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,2,0]);
+        r.markBusy(1);
+        assert(r.next == 2);
+        assert(r._busyness == [3,4,0]);
+        assert(r.scheduled == [2,0,1]);
 
-    r.markFreeing(1);
-    assert(r.next == 1);
-    assert(r.scheduled == [1,0,2]);
+        r.markBusy(2);
+        assert(r.scheduled == [0,1,2]);
+    }
 
-    r.markFree(0);
-    assert(r.next == 0);
-    assert(r.scheduled == [0,1,2]);
+    // Test order of slowly freeing
+    {
+        r.markSlowlyFreeing(1);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,0,2]);
+
+        r.markSlowlyFreeing(2);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,2,0]);
+
+        r.markBusy(1);
+        assert(r.next == 2);
+        assert(r.scheduled == [2,0,1]);
+
+        r.markSlowlyFreeing(0);
+        assert(r.next == 2);
+        assert(r.scheduled == [2,0,1]);
+
+        r.markBusy(2);
+        assert(r.next == 0);
+        assert(r.scheduled == [0,1,2]);
+
+        r.markSlowlyFreeing(2);
+        assert(r.next == 0);
+        assert(r.scheduled == [0,2,1]);
+
+        r.markSlowlyFreeing(1);
+        assert(r.next == 0);
+        assert(r.scheduled == [0,2,1]);
+
+        r.markFree(1);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,0,2]);
+
+        r.markBusy(1);
+        assert(r.next == 0);
+        assert(r.scheduled == [0,2,1]);
+
+        r.markSlowlyFreeing(1);
+        assert(r.next == 0);
+        assert(r.scheduled == [0,2,1]);
+
+        r.markBusy(0);
+        assert(r.next == 2);
+        assert(r.scheduled == [2,1,0]);
+
+        r.markSlowlyFreeing(0);
+        assert(r.next == 2);
+        assert(r.scheduled == [2,1,0]);
+
+        r.markBusy(2);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,0,2]);
+
+        r.markSlowlyFreeing(2);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,0,2]);
+
+    }
+
+    // Test bubblesort
+    {
+        r.reset();
+        r._busyness = [1,2,0];
+        int[3] idx = [0,1,2];
+        r.bubbleSort(idx);
+        assert(idx == [2,0,1]);
+
+        r.maxElt = 2;
+        r._busyness = [2,1,0];
+        idx = [0,1,2];
+        r.bubbleSort(idx);
+        assert(idx == [1,0,2]);
+    }
+
+    // Test change of maxElt
+    {
+        r.reset();
+        assert(r._busyness == [0,0,0]);
+
+        r.maxElt = 2;
+        assert(r.scheduled == [0,1,2]);
+
+        r.markBusy(0);
+        assert(r._indexes == [0,1,2]);
+        assert(r._busyness == [3,0,0]);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,0,2]);
+        // double check scheduled() has no side effect
+        assert(r.next == 1);
+
+        r.markBusy(1);
+        assert(r.next == 0);
+
+        r.markFreeing(1);
+        assert(r.next == 1);
+        assert(r.scheduled == [1,0,2]);
+
+        r.markFree(0);
+        assert(r.next == 0);
+        assert(r.scheduled == [0,1,2]);
+    }
 }
 
 
@@ -173,6 +328,8 @@ private:
 }
 
 
+
+// Test Queue
 unittest
 {
     // Test queue of integers
@@ -182,7 +339,7 @@ unittest
         assert(q.isEmpty);
         assert(!q.isFull);
         assert(q.capacity == 3);
-        assert(q.size == 0);
+        assert(q.length == 0);
 
         q.push(1);
         assert(!q.isEmpty);
@@ -191,11 +348,11 @@ unittest
         q.push(3);
 
         assert(q.isFull);
-        assert(q.size == 3);
+        assert(q.length == 3);
 
         assert(q.peek == 1);
         assert(q.pop == 1);
-        assert(q.size == 2);
+        assert(q.length == 2);
 
         q.push(4);
         assert(q.isFull);
@@ -213,7 +370,7 @@ unittest
 
         q.push("hello");
         assert(q.peek == "hello");
-        assert(q.size == 1);
+        assert(q.length == 1);
 
         q.push("world");
         assert(q.isFull);
