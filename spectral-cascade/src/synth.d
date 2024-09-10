@@ -68,29 +68,32 @@ public:
 
     void markNoteOff(int note)
     {
-        foreach (ref v; _voices)
+        foreach (int i; 0.._voices.length)
+        {
+            auto v = &_voices[i];
             if (v.isPlaying && v.noteWithoutBend == note)
-                v.release();
+                releaseVoice(i);
+        }
     }
 
     void markAllNotesOff()
     {
-        foreach (ref v; _voices)
-            if (v.isPlaying)
-                v.quasiInstantRelease();
+        foreach (int i; 0.._voices.length)
+            if (_voices[i].isPlaying)
+                quasiInstantReleaseVoice(i);
     }
 
     @property bool panic() { return _panic; }
     @property bool panic(bool value)
     {
         if (value)
+        {
             foreach (ref v; _voices)
-            {
-                // TODO: use v.quasiInstantRelease();
                 v.instantRelease();
-                _voiceQueue.empty();
-                _roundRobin.reset();
-            }
+
+            _voiceQueue.empty();
+            _roundRobin.reset();
+        }
 
         return _panic = value;
     }
@@ -125,16 +128,30 @@ public:
         _roundRobin.reset();
     }
 
-    void updateRoundRobin()
+    void playNextQueuedVoice(int i)
+    {
+            _voices[i].play(_voiceQueue.pop());
+            _roundRobin.markBusy(i);
+    }
+
+    void releaseVoice(int i)
+    {
+            _voices[i].release();
+            _roundRobin.markSlowlyFreeing(i);
+    }
+
+    void quasiInstantReleaseVoice(int i)
+    {
+            _voices[i].quasiInstantRelease();
+            _roundRobin.markFreeing(i);
+    }
+
+    void freeReleasedVoices()
     {
         foreach (i; 0.._activeVoices)
         {
             if (!_voices[i].isPlaying)
                 _roundRobin.markFree(i);
-            else if (_voices[i].isReleasingQuickly)
-                _roundRobin.markFreeing(i);
-            else if (_voices[i].isReleasing)
-                _roundRobin.markSlowlyFreeing(i);
         }
     }
 
@@ -152,10 +169,7 @@ public:
             auto v = &_voices[scheduled];
 
             if (v.isPlaying && !v.isReleasingQuickly)
-            {
-                v.quasiInstantRelease();
-                _roundRobin.markFreeing(scheduled);
-            }
+                quasiInstantReleaseVoice(scheduled);
 
             if (v.isPlaying && v.isReleasingQuickly)
             {
@@ -163,13 +177,10 @@ public:
                 // to be fully released
             }
 
+            // note: here pitch bend only applied at start of note,
+            // and not updated later.
             if (!v.isPlaying)
-            {
-                // note: here pitch bend only applied at start of note,
-                // and not updated later.
-                v.play(_voiceQueue.pop());
-                _roundRobin.markBusy(scheduled);
-            }
+                playNextQueuedVoice(scheduled);
         }
     }
 
@@ -183,7 +194,7 @@ public:
     {
         if (panic) return 0;
 
-        updateRoundRobin();
+        freeReleasedVoices();
         handleVoiceQueue();
 
         if (!anyVoicePlaying())
