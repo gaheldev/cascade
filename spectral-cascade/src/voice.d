@@ -101,8 +101,7 @@ public:
     {
         instantRelease();
         initOsc(sampleRate);
-        _solverIntp.initLevels(0.0, 0.0, 0.0);
-        _solverIntp.sampleRate = sampleRate;
+        _solverIntp.reset(sampleRate);
         _attack.reset(sampleRate);
         _release.reset(sampleRate);
         _isReleasingQuickly = false;
@@ -177,6 +176,13 @@ public:
     }
 
     bool isProcessing() { return _solver.isProcessing; }
+
+
+    void reset(float sampleRate)
+    {
+        this.initLevels(0.0, 0.0, 0.0);
+        this.sampleRate = sampleRate;
+    }
 
 	void initLevels(float e0, float en, float exciteAmount)
 	{

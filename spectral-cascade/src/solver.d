@@ -48,8 +48,8 @@ public:
         float e = levels[n] + delta_t * (  dissipation(n)
                                          + T(n)
                                          - T(n+1)
-                                         + g(n)*noise()
                                         );
+        e += g(n) * noise();
         return max(e,0);
     }
 
@@ -137,6 +137,16 @@ public:
         if (eta==0) return 0;
         return eta * k_delta(i) * levels_gamma(i);
     }
+
+    void reset_caches()
+    {
+        _reset_cache(c_lambda_pow);
+        _reset_cache(c_k);
+        _reset_cache(c_k_delta);
+        _reset_cache(c_levels_gamma);
+        _reset_cache(c_T);
+        _reset_cache(c_dissipation);
+    }
     
     float[N_HARMONICS+2] levels = 1.0;
 
@@ -202,8 +212,8 @@ private:
     // rng
     TableGaussianGenerator!12345 _rng;
     // TODO: check std is correct (delta_t^^0.5 ?)
-    float _get_noise_stddev(float delta_t) { return 1.0 / sqrt(delta_t); }
-    float _noise_stddev = 1.0 / sqrt(1.0 / 48000.0); // 1 / (delta_t^^0.5)
+    float _get_noise_stddev(float delta_t) { return sqrt(delta_t); }
+    float _noise_stddev = sqrt(1.0 / 48000.0); // 1 / (delta_t^^0.5)
 
     // caches
     const int CACHE_SIZE = 2 * N_HARMONICS; // a bit of extra space
