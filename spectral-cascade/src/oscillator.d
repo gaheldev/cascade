@@ -7,8 +7,8 @@ enum double TAU = 2 * PI;
 
 enum WaveForm
 {
-    saw,
     sine,
+    saw,
     square,
 }
 
