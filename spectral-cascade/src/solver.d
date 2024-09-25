@@ -28,6 +28,7 @@ public:
     void nextStep()
     {
         _reset_cache(c_T);
+        _reset_cache(c_levels_gamma);
         foreach (n; 0..cast(int) levels.length)
             _newLevels[n] = nextLevel(n);
         levels = _newLevels;
@@ -126,7 +127,7 @@ public:
     float levels_gamma(int i)
     {
         if (c_levels_gamma[i] == -1)
-            c_levels_gamma[i] = levels[i].pow(_delta);
+            c_levels_gamma[i] = levels[i].pow(_gamma);
         return c_levels_gamma[i];
 
     }
@@ -159,7 +160,10 @@ public:
     @property float k0(float value)
     {
         if (value != m_k0)
+        {
             _reset_cache(c_k);
+            _reset_cache(c_k_delta);
+        }
         return m_k0 = value;
     }
 
@@ -168,7 +172,11 @@ public:
     @property float lambda(float value)
     {
         if (value != m_lambda)
+        {
             _reset_cache(c_lambda_pow);
+            _reset_cache(c_k);
+            _reset_cache(c_k_delta);
+        }
         return m_lambda = value;
     }
 
