@@ -83,7 +83,7 @@ public:
 
     float f(float x)
     {
-        if (x<=DENORMAL) return 0;
+        if (x<=DENORMAL) return 0; // creates discontinuity -> f(epsilon) > 0
 
         return a * b / (b * x.pow(alpha) + a * x.pow(beta));
     }
@@ -211,7 +211,6 @@ private:
 
     // rng
     TableGaussianGenerator!12345 _rng;
-    // TODO: check std is correct (delta_t^^0.5 ?)
     float _get_noise_stddev(float delta_t) { return sqrt(delta_t); }
     float _noise_stddev = sqrt(1.0 / 48000.0); // 1 / (delta_t^^0.5)
 

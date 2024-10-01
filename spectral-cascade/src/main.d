@@ -72,8 +72,8 @@ public:
         params ~= mallocNew!EnumParameter(paramOsc1WaveForm, "Waveform", waveFormNames, WaveForm.init);
         params ~= mallocNew!GainParameter(paramOutputGain, "Output Gain", 6.0, 0.0);
 
-        params ~= mallocNew!LinearFloatParameter(paramAttack, "Attack", "s", 0.0, 1.0, 0.01);
-        params ~= mallocNew!LinearFloatParameter(paramRelease, "Release", "s", 0.0, 5.0, 1.000);
+        params ~= mallocNew!LinearFloatParameter(paramAttack, "Attack", "s", 0.005, 1.0, 0.01);
+        params ~= mallocNew!LinearFloatParameter(paramRelease, "Release", "s", 0.005, 5.0, 1.000);
         params ~= mallocNew!BoolParameter(paramInterpolate, "Interpolate", true);
         params ~= mallocNew!LinearFloatParameter(paramE0, "E0", "", 0.0, 1.0, 1.0);
         params ~= mallocNew!LinearFloatParameter(paramEn, "En", "", 0.0, 1.0, 1.0);
