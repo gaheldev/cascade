@@ -36,6 +36,11 @@ public:
         recalculateDeltaPhase();
     }
 
+    void resetPhase()
+    {
+        _phase = 0;
+    }
+
     WaveForm waveForm()
     {
         return _waveForm;

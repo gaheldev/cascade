@@ -54,7 +54,10 @@ public:
         _noteOriginal = status.note;
         float fundamental = convertMIDINoteToFrequency(status.note + status.pitchBend * 12);
         foreach (i; 0..N_HARMONICS)
+        {
             _osc[i].frequency = fundamental * (i+1);
+            _osc[i].resetPhase();
+        }
 
         _volume = status.velocity / 128.0f;
 
